@@ -1,0 +1,15 @@
+This directory contains all of the code for the various pipelines:
+    (alignments) Alignments
+        Bwa
+        Bowtie
+        CASAVA
+        Tophat
+    (conversion) Conversion of bcl to fastq files
+    (DGE) Differential Gene Expression (DGE) Analysis 
+        cuffdiff
+    (exome) Exome analysis
+        CASAVA
+    (var_discovery) Variant discovery 
+        CASAVA
+        GATK
+        mpileup
