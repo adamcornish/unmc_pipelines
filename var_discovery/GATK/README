@@ -1,0 +1,9 @@
+This is the pipeline to run variant calling using GATK when given a single sample (can be SE or PE)
+
+To run:
+    Edit lines 13-15 to reflect your current situation.
+        e.g. name   = "my_exome"
+             read_1 = "path/to/my/reads/read1.fastq"
+             read_2 = "path/to/my/reads/read2.fastq"
+    Now you can run the script:
+        perl run.pl
