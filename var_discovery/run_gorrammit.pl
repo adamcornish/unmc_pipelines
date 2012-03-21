@@ -7,6 +7,7 @@ use strict;
 #
 #     OPTION    Default                                                 Description
 #     BIN       /opt/var_calling                                        Absolute location of the Picard Tools and GATK jar files
+#     SNPEFF    /opt/snpeff                                             Absolute location of snpEff and its requisite files
 #     REF_DIR   /safer/genomes/Homo_sapiens/UCSC/hg19                   Absolute location of the reference directory
 #     BT2       /safer/genomes/Homo_sapiens/Sequence/BowtieIndex/hg19   Absolute location of the Bowtie2 index
 #     THREADS   64                                                      Number of threads to use in parallelizable modules
@@ -22,6 +23,7 @@ usage() if $config !~ /READS_DIR/;
 ######## Start Variables ########
 
 my $bin       = ( $config =~ /^BIN\s+(\S+)/ )       ? $1 : "/opt/var_calling";
+my $snpEff    = ( $config =~ /^SNPEFF\s+(\S+)/ )    ? $1 : "/opt/snpeff";
 my $ref_dir   = ( $config =~ /^REF_DIR\s+(\S+)/ )   ? $1 : "/safer/genomes/Homo_sapiens/UCSC/hg19";
 my $bt2_idx   = ( $config =~ /^BT2\s+(\S+)/ )       ? $1 : "$ref_dir/Sequence/BowtieIndex/hg19";
 my $threads   = ( $config =~ /^THREADS\s+(\S+)/ )   ? $1 : "64";
@@ -42,7 +44,7 @@ chomp ( my $time   = `date +%T` );
 
 for ( my $i = 0; $i < @reads; $i += 2 )
 {
-    my ($name) = $reads[$i] =~ /^(.+?)_/;
+    my ($name) = $reads[$i] =~ /^.+\/(.+?)_/;
     my $R1     = $reads[$i];
     my $R2     = $reads[$i+1];
     my $JAVA_pre = "java -Xmx${memory}g -jar";
@@ -61,6 +63,12 @@ for ( my $i = 0; $i < @reads; $i += 2 )
                        "java -Xmx8g -jar $gatk -T UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw_indels.vcf -glm INDEL -mbq 20 -stand_call_conf 40.0 -stand_emit_conf 10.0 -dcov 1000 -D $indels -L $exome_bed >> $log.stdout 2>> $log.stderr",
                        "$GATK_pre VariantFiltration -R $ref -V $name.raw_snvs.vcf   -o $name.filtered_snvs.vcf   -filter 'DP <= 20 || HRun > 8 || QD < 5.0' -filterName 'standard_filters' -filter 'MQ0 >= 4 && ((MQ0 / (1.0  * DP)) > 0.1 )' -filterName 'hard_to_validate' >> $log.stdout 2>> $log.stderr",
                        "$GATK_pre VariantFiltration -R $ref -V $name.raw_indels.vcf -o $name.filtered_indels.vcf -filter 'DP <= 20 || HRun > 8 || QD < 5.0' -filterName 'standard_filters' -filter 'MQ0 >= 4 && ((MQ0 / (1.0  * DP)) > 0.1 )' -filterName 'hard_to_validate' >> $log.stdout 2>> $log.stderr",
+                       "cat $name.filter_snvs.vcf   | grep -P '^#' > $name.pass.snvs.vcf",
+                       "cat $name.filter_indels.vcf | grep -P '^#' > $name.pass.indels.vcf",
+                       "cat $name.filter_snvs.vcf   | grep PASS >> $name.pass.snvs.vcf",
+                       "cat $name.filter_indels.vcf | grep PASS >> $name.pass.indels.vcf",
+                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.snvs.html   -no-downstream -no-intergenic -no-intron -no-upstream -no-utr -minC 15 -v -i vcf -o txt hg19 $name.pass.snvs.vcf   > $name.annotated.snvs.txt",
+                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.indels.html -no-downstream -no-intergenic -no-intron -no-upstream -no-utr -minC 15 -v -i vcf -o txt hg19 $name.pass.indels.vcf > $name.annotated.indels.txt",
                      );
 
     my $nom    = "00";
@@ -70,8 +78,8 @@ for ( my $i = 0; $i < @reads; $i += 2 )
     {
         chomp ( $time = `date +%T` );
         my ($clean_step) = $step;
-        $clean_step =~ s/ -/\n                  -/g;
-        print "[$time][$nom/$#steps] Running this step: \n", " "x18, "$clean_step\n";
+        $clean_step =~ s/ -/\n                  -/g if length ($clean_step) > 256;
+        print "[$time][$nom/$#steps] Running this step: \n\n", " "x18, "$clean_step\n\n";
        #system ( $step );
         $nom = sprintf ( "%02d", ++$nom);
     }
@@ -90,6 +98,7 @@ sub usage
 
          OPTION    Default                                                 Description
          BIN       /opt/var_calling                                        Absolute location of the Picard Tools and GATK jar files
+         SNPEFF    /opt/snpeff                                             Absolute location of snpEff and its requisite files
          REF_DIR   /safer/genomes/Homo_sapiens/UCSC/hg19                   Absolute location of the reference directory
          BT2       /safer/genomes/Homo_sapiens/Sequence/BowtieIndex/hg19   Absolute location of the Bowtie2 index
          THREADS   64                                                      Number of threads to use in parallelizable modules
