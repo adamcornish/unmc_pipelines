@@ -1,9 +1,18 @@
-This is the pipeline to run variant calling using GATK when given a single sample (can be SE or PE)
+This is the pipeline to run variant calling using GATK when given a single sample. In its current incarnation, it must be PE data.
 
-To run:
-    Edit lines 13-15 to reflect your current situation.
-        e.g. name   = "my_exome"
-             read_1 = "path/to/my/reads/read1.fastq"
-             read_2 = "path/to/my/reads/read2.fastq"
-    Now you can run the script:
-        perl run.pl
+The script can be run from any folder, but note that the output files will be placed in the folder that you run the script from.
+
+Usage: perl run_gorrammit.pl <configuration_file.txt>
+
+    Your configuration file MUST have a READS_DIR specified.
+
+    Configuration options available
+
+         OPTION    Default                                                 Description
+         BIN       /opt/var_calling                                        Absolute location of the Picard Tools and GATK jar files
+         SNPEFF    /opt/snpeff                                             Absolute location of snpEff and its requisite files
+         REF_DIR   /safer/genomes/Homo_sapiens/UCSC/hg19                   Absolute location of the reference directory
+         BT2       /safer/genomes/Homo_sapiens/Sequence/BowtieIndex/hg19   Absolute location of the Bowtie2 index
+         THREADS   64                                                      Number of threads to use in parallelizable modules
+         MEMORY    64                                                      Amount of memory, in gigabytes, to use
+         READS_DIR N/A                                                     Absolute location of the reads that are going to be used
