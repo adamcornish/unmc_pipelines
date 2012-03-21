@@ -1,4 +1,5 @@
 BIN       /opt/var_calling
+SNPEFF    /opt/snpeff
 REF_DIR   /data/genomes/Homo_sapiens/UCSC/hg19
 BT2       /data/genomes/Homo_sapiens/Sequence/BowtieIndex/hg19
 THREADS   24
