@@ -15,9 +15,9 @@ use strict;
 #
 
 usage() unless $#ARGV == 0;
-my $in        = shift;
-my $config    = `cat $in`;
-usage() unless $config =~ /^READS_DIR\s+\S+/;
+my $in     = shift;
+my $config = `cat $in`;
+usage() if $config !~ /READS_DIR/;
 
 ######## Start Variables ########
 
@@ -84,7 +84,7 @@ sub usage
 
     Usage: perl $0 <configuration_file.txt>
 
-    Configuration file MUST at least have READS_DIR configured in it.
+    Your configuration file MUST have a READS_DIR specified.
 
     Configuration options available
 
