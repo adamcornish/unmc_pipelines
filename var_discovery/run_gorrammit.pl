@@ -5,14 +5,14 @@ use strict;
 #
 # Configuration options available
 #
-#     OPTION    Default                                                 Description
-#     BIN       /opt/var_calling                                        Absolute location of the Picard Tools and GATK jar files
-#     SNPEFF    /opt/snpeff                                             Absolute location of snpEff and its requisite files
-#     REF_DIR   /safer/genomes/Homo_sapiens/UCSC/hg19                   Absolute location of the reference directory
-#     BT2       /safer/genomes/Homo_sapiens/Sequence/BowtieIndex/hg19   Absolute location of the Bowtie2 index
-#     THREADS   64                                                      Number of threads to use in parallelizable modules
-#     MEMORY    64                                                      Amount of memory, in gigabytes, to use
-#     READS_DIR N/A                                                     Absolute location of the reads that are going to be used
+#     OPTION    Default                                  Description
+#     BIN       /opt/var_calling                         Absolute location of the Picard Tools and GATK jar files
+#     SNPEFF    /opt/snpeff                              Absolute location of snpEff and its requisite files
+#     REF_DIR   /data/genomes/Homo_sapiens/UCSC/hg19     Absolute location of the reference directory
+#     BT2       REF_DIR/Sequence/BowtieIndex/ucsc.hg19   Absolute location of the Bowtie2 index
+#     THREADS   64                                       Number of threads to use in parallelizable modules
+#     MEMORY    64                                       Amount of memory, in gigabytes, to use
+#     READS_DIR N/A                                      Absolute location of the reads that are going to be used
 #
 
 usage() unless $#ARGV == 0;
@@ -22,15 +22,17 @@ usage() if $config !~ /READS_DIR/;
 
 ######## Start Variables ########
 
-my $bin       = ( $config =~ /^BIN\s+(\S+)/ )       ? $1 : "/opt/var_calling";
-my $snpEff    = ( $config =~ /^SNPEFF\s+(\S+)/ )    ? $1 : "/opt/snpeff";
-my $ref_dir   = ( $config =~ /^REF_DIR\s+(\S+)/ )   ? $1 : "/safer/genomes/Homo_sapiens/UCSC/hg19";
-my $bt2_idx   = ( $config =~ /^BT2\s+(\S+)/ )       ? $1 : "$ref_dir/Sequence/BowtieIndex/hg19";
-my $threads   = ( $config =~ /^THREADS\s+(\S+)/ )   ? $1 : "64";
-my $memory    = ( $config =~ /^MEMORY\s+(\S+)/ )    ? $1 : "64";
-my $reads_dir = ( $config =~ /^READS_DIR\s+(\S+)/ ) ? $1 : ".";
+my $bin       = ( $config =~ /BIN\s+(\S+)/ )       ? $1 : "/opt/var_calling";
+my $snpEff    = ( $config =~ /SNPEFF\s+(\S+)/ )    ? $1 : "/opt/snpeff";
+my $ref_dir   = ( $config =~ /REF_DIR\s+(\S+)/ )   ? $1 : "/data/genomes/Homo_sapiens/UCSC/hg19";
+my $bt2_idx   = ( $config =~ /BT2\s+(\S+)/ )       ? $1 : "$ref_dir/Sequence/BowtieIndex/ucsc.hg19";
+my $threads   = ( $config =~ /THREADS\s+(\S+)/ )   ? $1 : "64";
+my $memory    = ( $config =~ /MEMORY\s+(\S+)/ )    ? $1 : "64";
+my $reads_dir = ( $config =~ /READS_DIR\s+(\S+)/ ) ? $1 : ".";
 my $gatk      = "$bin/GenomeAnalysisTK.jar";
 my $dbsnp     = "$ref_dir/Annotation/Variation/dbsnp.vcf";
+my $omni      = "$ref_dir/Annotation/Variation/omni.vcf";
+my $hapmap    = "$ref_dir/Annotation/Variation/hapmap.vcf";
 my $indels    = "$ref_dir/Annotation/Variation/indels.vcf";
 my $exome_bed = "$ref_dir/Annotation/Genes/refSeq_genes.bed";
 my $ref       = "$ref_dir/Sequence/WholeGenomeFasta/ref.fa";
@@ -39,6 +41,14 @@ die "There are no read 1 fastq reads in $reads_dir. The read 1 reads must be for
 die "There are no read 2 fastq reads in $reads_dir. The read 2 reads must be formatted as follows: *_R2.fastq.\n" unless ( `ls $reads_dir/*_R2.fastq` );
 chomp ( my @reads  = `ls $reads_dir/*fastq` );
 chomp ( my $time   = `date +%T` );
+
+print "BIN      : $bin\n",
+      "SNPEFF   : $snpEff\n",
+      "REF_DIR  : $ref_dir\n",
+      "BT2_IDX  : $bt2_idx\n",
+      "THREADS  : $threads\n",
+      "MEMORY   : $memory\n",
+      "READS_DIR: $reads_dir\n";
 
 ######## End Variables ########
 
@@ -59,16 +69,19 @@ for ( my $i = 0; $i < @reads; $i += 2 )
                        "$GATK_pre CountCovariates -nt $threads -R $ref --knownSites $dbsnp -I $name.indels_realigned.bam -cov ReadGroupCovariate -cov QualityScoreCovariate -cov CycleCovariate -cov DinucCovariate -dP illumina -recalFile $name.recal.csv >> $log.stdout 2>> $log.stderr",
                        "$GATK_pre TableRecalibration -R $ref -I $name.indels_realigned.bam --out $name.recalibrated.bam -recalFile $name.recal.csv >> $log.stdout 2>> $log.stderr",
                        "samtools index $name.recalibrated.bam >> $log.stdout 2>> $log.stderr",
-                       "java -Xmx8g -jar $gatk -T UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw_snvs.vcf              -mbq 20 -stand_call_conf 40.0 -stand_emit_conf 10.0 -dcov 1000 -D $dbsnp  -L $exome_bed >> $log.stdout 2>> $log.stderr",
-                       "java -Xmx8g -jar $gatk -T UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw_indels.vcf -glm INDEL -mbq 20 -stand_call_conf 40.0 -stand_emit_conf 10.0 -dcov 1000 -D $indels -L $exome_bed >> $log.stdout 2>> $log.stderr",
-                       "$GATK_pre VariantFiltration -R $ref -V $name.raw_snvs.vcf   -o $name.filtered_snvs.vcf   -filter 'DP <= 20 || HRun > 8 || QD < 5.0' -filterName 'standard_filters' -filter 'MQ0 >= 4 && ((MQ0 / (1.0  * DP)) > 0.1 )' -filterName 'hard_to_validate' >> $log.stdout 2>> $log.stderr",
-                       "$GATK_pre VariantFiltration -R $ref -V $name.raw_indels.vcf -o $name.filtered_indels.vcf -filter 'DP <= 20 || HRun > 8 || QD < 5.0' -filterName 'standard_filters' -filter 'MQ0 >= 4 && ((MQ0 / (1.0  * DP)) > 0.1 )' -filterName 'hard_to_validate' >> $log.stdout 2>> $log.stderr",
-                       "cat $name.filter_snvs.vcf   | grep -P '^#' > $name.pass.snvs.vcf",
-                       "cat $name.filter_indels.vcf | grep -P '^#' > $name.pass.indels.vcf",
-                       "cat $name.filter_snvs.vcf   | grep PASS >> $name.pass.snvs.vcf",
-                       "cat $name.filter_indels.vcf | grep PASS >> $name.pass.indels.vcf",
-                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.snvs.html   -no-downstream -no-intergenic -no-intron -no-upstream -no-utr -minC 15 -v -i vcf -o txt hg19 $name.pass.snvs.vcf   > $name.annotated.snvs.txt",
-                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.indels.html -no-downstream -no-intergenic -no-intron -no-upstream -no-utr -minC 15 -v -i vcf -o txt hg19 $name.pass.indels.vcf > $name.annotated.indels.txt",
+                       "java -Xmx8g -jar $gatk -T UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw.snvs.vcf   -glm SNP   -mbq 20 -stand_emit_conf 10.0 -D $dbsnp  >> $log.stdout 2>> $log.stderr",
+                       "java -Xmx8g -jar $gatk -T UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw.indels.vcf -glm INDEL -mbq 20 -stand_emit_conf 10.0 -D $indels >> $log.stdout 2>> $log.stderr",
+                      #"$GATK_pre VariantFiltration -R $ref -V $name.raw_snvs.vcf   -o $name.filtered_snvs.vcf   -filter 'DP <= 20 || HRun > 8 || QD < 5.0' -filterName 'standard_filters' -filter 'MQ0 >= 4 && ((MQ0 / (1.0  * DP)) > 0.1 )' -filterName 'hard_to_validate' >> $log.stdout 2>> $log.stderr",
+                      #"$GATK_pre VariantFiltration -R $ref -V $name.raw_indels.vcf -o $name.filtered_indels.vcf -filter 'DP <= 20 || HRun > 8 || QD < 5.0' -filterName 'standard_filters' -filter 'MQ0 >= 4 && ((MQ0 / (1.0  * DP)) > 0.1 )' -filterName 'hard_to_validate' >> $log.stdout 2>> $log.stderr",
+                      #"cat $name.filter_snvs.vcf   | grep -P '^#' > $name.pass.snvs.vcf",
+                      #"cat $name.filter_indels.vcf | grep -P '^#' > $name.pass.indels.vcf",
+                      #"cat $name.filter_snvs.vcf   | grep PASS >> $name.pass.snvs.vcf",
+                      #"cat $name.filter_indels.vcf | grep PASS >> $name.pass.indels.vcf",
+                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.snvs.html   -minC 15 -v -i vcf -o txt hg19 $name.raw.snvs.vcf   > $name.snvs.txt",
+                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.indels.html -minC 15 -v -i vcf -o txt hg19 $name.raw.indels.vcf > $name.indels.txt",
+                       "$GATK_pre -T VariantAnnotator -R $ref -nt $threads -I $name.recalibrated.bam -o $name.VA.vcf -A DepthOfCoverage -A QD -A HaplotypeScore -A MQRankSum -A ReadPosRankSum -A FS -A MQ -A InbreedingCoeff -V $name.raw.snvs.vcf -D $dbsnp -snpEffFile $name.snvs.txt",
+                       "$GATK_pre -T VariantRecalibrator -R $ref -input $name.VA.vcf -resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0 $hapmap -resource:omni,VCF,known=false,training=true,truth=false,prior=12.0 $omni -resource:dbsnp,VCF,known=true,training=false,truth=false,prior=6.0 $dbsnp -an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an MQ -recalFile recal.out -tranchesFile tranches.out -rscriptFile plots.R",
+                       "$GATK_pre -T ApplyRecalibration -R $ref -input $name.VA.snvs.vcf -ts_filter_level 99.0 -tranchesFile tranches.out -recalFile recal.out -o $name.recalibrated.filtered.snvs.vcf",
                      );
 
     my $nom    = "00";
@@ -80,7 +93,7 @@ for ( my $i = 0; $i < @reads; $i += 2 )
         my ($clean_step) = $step;
         $clean_step =~ s/ -/\n                  -/g if length ($clean_step) > 256;
         print "[$time][$nom/$#steps] Running this step: \n\n", " "x18, "$clean_step\n\n";
-       #system ( $step );
+        system ( $step );
         $nom = sprintf ( "%02d", ++$nom);
     }
    #system ( "mkdir $name; mv $name.* $name;" ); 
@@ -96,14 +109,14 @@ sub usage
 
     Configuration options available
 
-         OPTION    Default                                                 Description
-         BIN       /opt/var_calling                                        Absolute location of the Picard Tools and GATK jar files
-         SNPEFF    /opt/snpeff                                             Absolute location of snpEff and its requisite files
-         REF_DIR   /safer/genomes/Homo_sapiens/UCSC/hg19                   Absolute location of the reference directory
-         BT2       /safer/genomes/Homo_sapiens/Sequence/BowtieIndex/hg19   Absolute location of the Bowtie2 index
-         THREADS   64                                                      Number of threads to use in parallelizable modules
-         MEMORY    64                                                      Amount of memory, in gigabytes, to use
-         READS_DIR N/A                                                     Absolute location of the reads that are going to be used
+      OPTION    Default                                  Description
+      BIN       /opt/var_calling                         Absolute location of the Picard Tools and GATK jar files
+      SNPEFF    /opt/snpeff                              Absolute location of snpEff and its requisite files
+      REF_DIR   /data/genomes/Homo_sapiens/UCSC/hg19/    Absolute location of the reference directory
+      BT2       REF_DIR/Sequence/BowtieIndex/ucsc.hg19   Absolute location of the Bowtie2 index
+      THREADS   64                                       Number of threads to use in parallelizable modules
+      MEMORY    64                                       Amount of memory, in gigabytes, to use
+      READS_DIR N/A                                      Absolute location of the reads that are going to be used
      
 USAGE
 }
