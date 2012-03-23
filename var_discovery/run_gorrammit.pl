@@ -33,9 +33,10 @@ my $gatk      = "$bin/GenomeAnalysisTK.jar";
 my $dbsnp     = "$ref_dir/Annotation/Variation/dbsnp.vcf";
 my $omni      = "$ref_dir/Annotation/Variation/omni.vcf";
 my $hapmap    = "$ref_dir/Annotation/Variation/hapmap.vcf";
-my $indels    = "$ref_dir/Annotation/Variation/indels.vcf";
+#my $indels    = "$ref_dir/Annotation/Variation/indels.vcf";
+my $indels    = "$ref_dir/Annotation/Variation/dbsnp.vcf";
 my $exome_bed = "$ref_dir/Annotation/Genes/refSeq_genes.bed";
-my $ref       = "$ref_dir/Sequence/WholeGenomeFasta/ref.fa";
+my $ref       = "$ref_dir/Sequence/WholeGenomeFasta/ucsc.hg19.fasta";
 my $log       = "run.log";
 die "There are no read 1 fastq reads in $reads_dir. The read 1 reads must be formatted as follows: *_R1.fastq.\n" unless ( `ls $reads_dir/*_R1.fastq` );
 die "There are no read 2 fastq reads in $reads_dir. The read 2 reads must be formatted as follows: *_R2.fastq.\n" unless ( `ls $reads_dir/*_R2.fastq` );
@@ -64,13 +65,13 @@ for ( my $i = 0; $i < @reads; $i += 2 )
                        "samtools view -bS $name.sam -o $name.bam >> $log.stdout 2>> $log.stderr",
                        "$JAVA_pre $bin/SortSam.jar INPUT=$name.bam OUTPUT=$name.sorted.bam SORT_ORDER=coordinate VALIDATION_STRINGENCY=SILENT >> $log.stdout 2>> $log.stderr",
                        "$JAVA_pre $bin/AddOrReplaceReadGroups.jar I=$name.sorted.bam O=$name.fixed_RG.bam SO=coordinate RGID=$name RGLB=$name RGPL=illumina RGPU=$name RGSM=$name VALIDATION_STRINGENCY=LENIENT CREATE_INDEX=true >> $log.stdout 2>> $log.stderr",
-                       "$GATK_pre RealignerTargetCreator -R $ref -I $name.fixed_RG.bam -known $indels -o $name.indel_realigner.intervals >> $log.stdout 2>> $log.stderr",
-                       "$GATK_pre IndelRealigner -R $ref -I $name.fixed_RG.bam -known $indels -o $name.indels_realigned.bam --maxReadsForRealignment 100000 --maxReadsInMemory 1000000 -targetIntervals $name.indel_realigner.intervals >> $log.stdout 2>> $log.stderr",
-                       "$GATK_pre CountCovariates -nt $threads -R $ref --knownSites $dbsnp -I $name.indels_realigned.bam -cov ReadGroupCovariate -cov QualityScoreCovariate -cov CycleCovariate -cov DinucCovariate -dP illumina -recalFile $name.recal.csv >> $log.stdout 2>> $log.stderr",
-                       "$GATK_pre TableRecalibration -R $ref -I $name.indels_realigned.bam --out $name.recalibrated.bam -recalFile $name.recal.csv >> $log.stdout 2>> $log.stderr",
-                       "samtools index $name.recalibrated.bam >> $log.stdout 2>> $log.stderr",
-                       "java -Xmx8g -jar $gatk -T UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw.snvs.vcf   -glm SNP   -mbq 20 -stand_emit_conf 10.0 -D $dbsnp  >> $log.stdout 2>> $log.stderr",
-                       "java -Xmx8g -jar $gatk -T UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw.indels.vcf -glm INDEL -mbq 20 -stand_emit_conf 10.0 -D $indels >> $log.stdout 2>> $log.stderr",
+                       "$GATK_pre RealignerTargetCreator -R $ref -I $name.fixed_RG.bam -known $indels -o $name.indel_realigner.intervals", # >> $log.stdout 2>> $log.stderr",
+                       "$GATK_pre IndelRealigner -R $ref -I $name.fixed_RG.bam -known $indels -o $name.indels_realigned.bam --maxReadsForRealignment 100000 --maxReadsInMemory 1000000 -targetIntervals $name.indel_realigner.intervals", # >> $log.stdout 2>> $log.stderr",
+                       "$GATK_pre CountCovariates -nt $threads -R $ref --knownSites $dbsnp -I $name.indels_realigned.bam -cov ReadGroupCovariate -cov QualityScoreCovariate -cov CycleCovariate -cov DinucCovariate -dP illumina -recalFile $name.recal.csv", # >> $log.stdout 2>> $log.stderr",
+                       "$GATK_pre TableRecalibration -R $ref -I $name.indels_realigned.bam --out $name.recalibrated.bam -recalFile $name.recal.csv", #>> $log.stdout 2>> $log.stderr",
+                       "samtools index $name.recalibrated.bam", # >> $log.stdout 2>> $log.stderr",
+                       "java -Xmx8g -jar $gatk -T UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw.snvs.vcf   -glm SNP   -mbq 20 -stand_emit_conf 10.0 -D $dbsnp", #  >> $log.stdout 2>> $log.stderr",
+                       "java -Xmx8g -jar $gatk -T UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw.indels.vcf -glm INDEL -mbq 20 -stand_emit_conf 10.0 -D $indels", # >> $log.stdout 2>> $log.stderr",
                       #"$GATK_pre VariantFiltration -R $ref -V $name.raw_snvs.vcf   -o $name.filtered_snvs.vcf   -filter 'DP <= 20 || HRun > 8 || QD < 5.0' -filterName 'standard_filters' -filter 'MQ0 >= 4 && ((MQ0 / (1.0  * DP)) > 0.1 )' -filterName 'hard_to_validate' >> $log.stdout 2>> $log.stderr",
                       #"$GATK_pre VariantFiltration -R $ref -V $name.raw_indels.vcf -o $name.filtered_indels.vcf -filter 'DP <= 20 || HRun > 8 || QD < 5.0' -filterName 'standard_filters' -filter 'MQ0 >= 4 && ((MQ0 / (1.0  * DP)) > 0.1 )' -filterName 'hard_to_validate' >> $log.stdout 2>> $log.stderr",
                       #"cat $name.filter_snvs.vcf   | grep -P '^#' > $name.pass.snvs.vcf",
@@ -80,15 +81,16 @@ for ( my $i = 0; $i < @reads; $i += 2 )
                        "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.snvs.html   -minC 15 -v -i vcf -o txt hg19 $name.raw.snvs.vcf   > $name.snvs.txt",
                        "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.indels.html -minC 15 -v -i vcf -o txt hg19 $name.raw.indels.vcf > $name.indels.txt",
                        "$GATK_pre -T VariantAnnotator -R $ref -nt $threads -I $name.recalibrated.bam -o $name.VA.vcf -A DepthOfCoverage -A QD -A HaplotypeScore -A MQRankSum -A ReadPosRankSum -A FS -A MQ -A InbreedingCoeff -V $name.raw.snvs.vcf -D $dbsnp -snpEffFile $name.snvs.txt",
-                       "$GATK_pre -T VariantRecalibrator -R $ref -input $name.VA.vcf -resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0 $hapmap -resource:omni,VCF,known=false,training=true,truth=false,prior=12.0 $omni -resource:dbsnp,VCF,known=true,training=false,truth=false,prior=6.0 $dbsnp -an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an MQ -recalFile recal.out -tranchesFile tranches.out -rscriptFile plots.R",
+                       "$GATK_pre -T VariantRecalibrator -R $ref -input $name.VA.vcf -mG 6 -resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0 $hapmap -resource:omni,VCF,known=false,training=true,truth=false,prior=12.0 $omni -resource:dbsnp,VCF,known=true,training=false,truth=false,prior=6.0 $dbsnp -an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an MQ -recalFile recal.out -tranchesFile tranches.out",
                        "$GATK_pre -T ApplyRecalibration -R $ref -input $name.VA.snvs.vcf -ts_filter_level 99.0 -tranchesFile tranches.out -recalFile recal.out -o $name.recalibrated.filtered.snvs.vcf",
                      );
 
     my $nom    = "00";
     chomp ( $time = `date +%T` );
     print "[$time][- / -] Working on sample $name.\n";
-    foreach my $step ( @steps )
+    for ( my $i = 4; $i < @steps; $i++ )
     {
+        my $step = $steps[$i];
         chomp ( $time = `date +%T` );
         my ($clean_step) = $step;
         $clean_step =~ s/ -/\n                  -/g if length ($clean_step) > 256;
