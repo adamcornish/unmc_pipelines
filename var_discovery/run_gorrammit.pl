@@ -10,8 +10,8 @@ use strict;
 #     SNPEFF    /opt/snpeff                              Absolute location of snpEff and its requisite files
 #     REF_DIR   /data/genomes/Homo_sapiens/UCSC/hg19     Absolute location of the reference directory
 #     BT2       REF_DIR/Sequence/BowtieIndex/ucsc.hg19   Absolute location of the Bowtie2 index
-#     THREADS   64                                       Number of threads to use in parallelizable modules
-#     MEMORY    64                                       Amount of memory, in gigabytes, to use
+#     THREADS   24                                       Number of threads to use in parallelizable modules
+#     MEMORY    48                                       Amount of memory, in gigabytes, to use
 #     READS_DIR N/A                                      Absolute location of the reads that are going to be used
 #
 
@@ -26,8 +26,8 @@ my $bin       = ( $config =~ /BIN\s+(\S+)/ )       ? $1 : "/opt/var_calling";
 my $snpEff    = ( $config =~ /SNPEFF\s+(\S+)/ )    ? $1 : "/opt/snpeff";
 my $ref_dir   = ( $config =~ /REF_DIR\s+(\S+)/ )   ? $1 : "/data/genomes/Homo_sapiens/UCSC/hg19";
 my $bt2_idx   = ( $config =~ /BT2\s+(\S+)/ )       ? $1 : "$ref_dir/Sequence/BowtieIndex/ucsc.hg19";
-my $threads   = ( $config =~ /THREADS\s+(\S+)/ )   ? $1 : "64";
-my $memory    = ( $config =~ /MEMORY\s+(\S+)/ )    ? $1 : "64";
+my $threads   = ( $config =~ /THREADS\s+(\S+)/ )   ? $1 : "24";
+my $memory    = ( $config =~ /MEMORY\s+(\S+)/ )    ? $1 : "48";
 my $reads_dir = ( $config =~ /READS_DIR\s+(\S+)/ ) ? $1 : ".";
 my $gatk      = "$bin/GenomeAnalysisTK.jar";
 my $dbsnp     = "$ref_dir/Annotation/Variation/dbsnp.vcf";
@@ -114,8 +114,8 @@ sub usage
       SNPEFF    /opt/snpeff                              Absolute location of snpEff and its requisite files
       REF_DIR   /data/genomes/Homo_sapiens/UCSC/hg19/    Absolute location of the reference directory
       BT2       REF_DIR/Sequence/BowtieIndex/ucsc.hg19   Absolute location of the Bowtie2 index
-      THREADS   64                                       Number of threads to use in parallelizable modules
-      MEMORY    64                                       Amount of memory, in gigabytes, to use
+      THREADS   24                                       Number of threads to use in parallelizable modules
+      MEMORY    48                                       Amount of memory, in gigabytes, to use
       READS_DIR N/A                                      Absolute location of the reads that are going to be used
      
 USAGE
