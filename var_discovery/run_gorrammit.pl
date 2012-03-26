@@ -2,19 +2,6 @@
 use warnings;
 use strict;
 
-#
-# Configuration options available
-#
-#     OPTION    Default                                  Description
-#     BIN       /opt/var_calling                         Absolute location of the Picard Tools and GATK jar files
-#     SNPEFF    /opt/snpeff                              Absolute location of snpEff and its requisite files
-#     REF_DIR   /data/genomes/Homo_sapiens/UCSC/hg19     Absolute location of the reference directory
-#     BT2       REF_DIR/Sequence/BowtieIndex/ucsc.hg19   Absolute location of the Bowtie2 index
-#     THREADS   24                                       Number of threads to use in parallelizable modules
-#     MEMORY    48                                       Amount of memory, in gigabytes, to use
-#     READS_DIR N/A                                      Absolute location of the reads that are going to be used
-#
-
 usage() unless $#ARGV == 0;
 my $in     = shift;
 my $config = `cat $in`;
@@ -29,12 +16,13 @@ my $bt2_idx   = ( $config =~ /BT2\s+(\S+)/ )       ? $1 : "$ref_dir/Sequence/Bow
 my $threads   = ( $config =~ /THREADS\s+(\S+)/ )   ? $1 : "24";
 my $memory    = ( $config =~ /MEMORY\s+(\S+)/ )    ? $1 : "48";
 my $reads_dir = ( $config =~ /READS_DIR\s+(\S+)/ ) ? $1 : ".";
+my $step      = ( $config =~ /STEP\s+(\S+)/ )      ? $1 : "0";
 my $gatk      = "$bin/GenomeAnalysisTK.jar";
 my $dbsnp     = "$ref_dir/Annotation/Variation/dbsnp.vcf";
 my $omni      = "$ref_dir/Annotation/Variation/omni.vcf";
 my $hapmap    = "$ref_dir/Annotation/Variation/hapmap.vcf";
 #my $indels    = "$ref_dir/Annotation/Variation/indels.vcf";
-my $indels    = "$ref_dir/Annotation/Variation/dbsnp.vcf";
+my $indels    = $dbsnp;
 my $exome_bed = "$ref_dir/Annotation/Genes/refSeq_genes.bed";
 my $ref       = "$ref_dir/Sequence/WholeGenomeFasta/ucsc.hg19.fasta";
 my $log       = "run.log";
@@ -43,13 +31,14 @@ die "There are no read 2 fastq reads in $reads_dir. The read 2 reads must be for
 chomp ( my @reads  = `ls $reads_dir/*fastq` );
 chomp ( my $time   = `date +%T` );
 
-print "BIN      : $bin\n",
-      "SNPEFF   : $snpEff\n",
-      "REF_DIR  : $ref_dir\n",
-      "BT2_IDX  : $bt2_idx\n",
-      "THREADS  : $threads\n",
-      "MEMORY   : $memory\n",
-      "READS_DIR: $reads_dir\n";
+print "Options used     :\n",
+      "\tBIN      : $bin\n",
+      "\tSNPEFF   : $snpEff\n",
+      "\tREF_DIR  : $ref_dir\n",
+      "\tBT2_IDX  : $bt2_idx\n",
+      "\tTHREADS  : $threads\n",
+      "\tMEMORY   : $memory\n",
+      "\tREADS_DIR: $reads_dir\n";
 
 ######## End Variables ########
 
@@ -80,15 +69,16 @@ for ( my $i = 0; $i < @reads; $i += 2 )
                       #"cat $name.filter_indels.vcf | grep PASS >> $name.pass.indels.vcf",
                        "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.snvs.html   -minC 15 -v -i vcf -o txt hg19 $name.raw.snvs.vcf   > $name.snvs.txt",
                        "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.indels.html -minC 15 -v -i vcf -o txt hg19 $name.raw.indels.vcf > $name.indels.txt",
-                       "$GATK_pre -T VariantAnnotator -R $ref -nt $threads -I $name.recalibrated.bam -o $name.VA.vcf -A DepthOfCoverage -A QD -A HaplotypeScore -A MQRankSum -A ReadPosRankSum -A FS -A MQ -A InbreedingCoeff -V $name.raw.snvs.vcf -D $dbsnp -snpEffFile $name.snvs.txt",
-                       "$GATK_pre -T VariantRecalibrator -R $ref -input $name.VA.vcf -mG 6 -resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0 $hapmap -resource:omni,VCF,known=false,training=true,truth=false,prior=12.0 $omni -resource:dbsnp,VCF,known=true,training=false,truth=false,prior=6.0 $dbsnp -an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an MQ -recalFile recal.out -tranchesFile tranches.out",
-                       "$GATK_pre -T ApplyRecalibration -R $ref -input $name.VA.snvs.vcf -ts_filter_level 99.0 -tranchesFile tranches.out -recalFile recal.out -o $name.recalibrated.filtered.snvs.vcf",
+                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.snvs.html   -minC 15 -v -i vcf -o vcf hg19 $name.raw.snvs.vcf   > $name.snvs.vcf",
+                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.indels.html -minC 15 -v -i vcf -o vcf hg19 $name.raw.indels.vcf > $name.indels.vcf",
+                       "$GATK_pre -T VariantRecalibrator -R $ref -nt $threads -input $name.snvs.vcf -mG 6 -resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0 $hapmap -resource:omni,VCF,known=false,training=true,truth=false,prior=12.0 $omni -resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0 $dbsnp -an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an MQ -recalFile recal.out -tranchesFile tranches.out",
+                       "$GATK_pre -T ApplyRecalibration -R $ref -input $name.snvs.vcf -ts_filter_level 99.0 -tranchesFile tranches.out -recalFile recal.out -o $name.recalibrated.filtered.snvs.vcf",
                      );
 
     my $nom    = "00";
     chomp ( $time = `date +%T` );
     print "[$time][- / -] Working on sample $name.\n";
-    for ( my $i = 4; $i < @steps; $i++ )
+    for ( my $i = $step; $i < @steps; $i++ )
     {
         my $step = $steps[$i];
         chomp ( $time = `date +%T` );
@@ -119,6 +109,7 @@ sub usage
       THREADS   24                                       Number of threads to use in parallelizable modules
       MEMORY    48                                       Amount of memory, in gigabytes, to use
       READS_DIR N/A                                      Absolute location of the reads that are going to be used
-     
+      STEP      0                                        The step to start at in the pipeline (0-indexed).     
+
 USAGE
 }

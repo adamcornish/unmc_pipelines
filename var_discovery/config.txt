@@ -5,3 +5,4 @@ BT2       /data/genomes/Homo_sapiens/Sequence/BowtieIndex/hg19
 THREADS   24
 MEMORY    48
 READS_DIR ./
+STEP      0

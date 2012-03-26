@@ -16,4 +16,4 @@ Usage: perl run_gorrammit.pl <configuration_file.txt>
       THREADS   24                                       Number of threads to use in parallelizable modules
       MEMORY    48                                       Amount of memory, in gigabytes, to use
       READS_DIR N/A                                      Absolute location of the reads that are going to be used
-
+      STEP      0                                        The step to start at in the pipeline (0-indexed).
