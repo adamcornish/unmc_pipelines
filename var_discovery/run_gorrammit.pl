@@ -38,7 +38,8 @@ print "Options used     :\n",
       "\tBT2_IDX  : $bt2_idx\n",
       "\tTHREADS  : $threads\n",
       "\tMEMORY   : $memory\n",
-      "\tREADS_DIR: $reads_dir\n";
+      "\tREADS_DIR: $reads_dir\n",
+      "\tSTEP     : $step\n";
 
 ######## End Variables ########
 
