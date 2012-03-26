@@ -80,12 +80,12 @@ for ( my $i = 0; $i < @reads; $i += 2 )
     print "[$time][- / -] Working on sample $name.\n";
     for ( my $i = $step; $i < @steps; $i++ )
     {
-        my $step = $steps[$i];
+        my $current_step = $steps[$i];
         chomp ( $time = `date +%T` );
-        my ($clean_step) = $step;
+        my ($clean_step) = $current_step;
         $clean_step =~ s/ -/\n                  -/g if length ($clean_step) > 256;
         print "[$time][$nom/$#steps] Running this step: \n\n", " "x18, "$clean_step\n\n";
-        system ( $step );
+        system ( $current_step );
         $nom = sprintf ( "%02d", ++$nom);
     }
    #system ( "mkdir $name; mv $name.* $name;" ); 
