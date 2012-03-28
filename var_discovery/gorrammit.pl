@@ -21,7 +21,7 @@ my $gatk      = "$bin/GenomeAnalysisTK.jar";
 my $dbsnp     = "$ref_dir/Annotation/Variation/dbsnp.vcf";
 my $omni      = "$ref_dir/Annotation/Variation/omni.vcf";
 my $hapmap    = "$ref_dir/Annotation/Variation/hapmap.vcf";
-my $indels    = "$ref_dir/Annotation/Variation/indels.vcf";
+my $mills     = "$ref_dir/Annotation/Variation/indels.vcf";
 my $exome_bed = "$ref_dir/Annotation/Genes/refSeq_genes.bed";
 my $ref       = "$ref_dir/Sequence/WholeGenomeFasta/ucsc.hg19.fasta";
 die "There are no read 1 fastq reads in $reads_dir. The read 1 reads must be formatted as follows: *_R1.fastq.\n" unless ( `ls $reads_dir/*_R1.fastq` );
@@ -58,37 +58,40 @@ for ( my $i = 0; $i < @reads; $i += 2 )
                        "$GATK_pre CountCovariates -nt $threads -R $ref --knownSites $dbsnp -I $name.indels_realigned.bam -cov ReadGroupCovariate -cov QualityScoreCovariate -cov CycleCovariate -cov DinucCovariate -dP illumina -recalFile $name.recal.csv",
                        "$GATK_pre TableRecalibration -R $ref -I $name.indels_realigned.bam --out $name.recalibrated.bam -recalFile $name.recal.csv",
                        "samtools index $name.recalibrated.bam",
-                       "$GATK_pre UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw.snvs.vcf   -glm SNP   -mbq 20 -stand_emit_conf 10.0 -D $dbsnp",
-                       "$GATK_pre UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw.indels.vcf -glm INDEL -mbq 20 -stand_emit_conf 10.0 -D $indels",
-                       "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $name.snvs.vcf -mG 6 -mode SNP   -resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0 $hapmap -resource:omni,VCF,known=false,training=true,truth=false,prior=12.0 $omni -resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0 $dbsnp -an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an MQ -an FS -an InbreedingCoeff -an DP -recalFile recal.out -tranchesFile tranches.out",
-                       "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $name.snvs.vcf -mG 6 -mode INDEL -resource:mills,VCF,known=true,training=true,truth=true,prior=12.0 $mills -an QD -an HaplotypeScore -an ReadPosRankSum -an FS -an InbreedingCoeff -recalFile recal.out -tranchesFile tranches.out",
-                       "$GATK_pre ApplyRecalibration -R $ref -input $name.snvs.vcf   -ts_filter_level 99.0 -tranchesFile tranches.out -recalFile recal.out -o $name.recalibrated.snvs.vcf",
-                       "$GATK_pre ApplyRecalibration -R $ref -input $name.indels.vcf -ts_filter_level 99.0 -tranchesFile tranches.out -recalFile recal.out -o $name.recalibrated.indels.vcf",
-                       "$GATK_pre VariantFiltration -R $ref -V $name.raw.indels.vcf -o $name.filtered.indels.vcf -filter 'QD < 2.0 || ReadPosRankSum < -20.0 || InbreedingCoeff < -0.8 || FS > 200.0' -filterName 'standard_filters'",
-                       "cat $name.recalibrated.snvs.vcf | grep -P '^#' > $name.hard.snvs.vcf",
-                       "cat $name.recalibrated.snvs.vcf | grep -P '^#' > $name.pass.snvs.vcf",
-                       "cat $name.filtered.indels.vcf   | grep -P '^#' > $name.pass.indels.vcf",
-                       "cat $name.recalibrated.snvs.vcf | grep PASS >> $name.pass.snvs.vcf",
-                       "cat $name.filtered.indels.vcf   | grep PASS >> $name.pass.indels.vcf",
-                       "$GATK_pre VariantFiltration -R $ref -V $name.recalibrated.snvs.vcf -o tmp.vcf -filter 'QS < 2.0 || MQ < 40.0 || FS > 60.0 HaplotypeScore > 13.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0' -filterName 'hard_filters'",
-                       "cat tmp.vcf | grep hard_filters >> $name.hard.snvs.vcf; rm tmp.vcf",
-                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.hard.html   -v -i vcf -o txt hg19 $name.hard.snvs.vcf   > $name.hard.txt",
-                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.snvs.html   -v -i vcf -o txt hg19 $name.pass.snvs.vcf   > $name.snvs.txt",
-                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.indels.html -v -i vcf -o txt hg19 $name.pass.indels.vcf > $name.indels.txt",
+                       "$GATK_pre UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw.snvs.vcf   -glm SNP   -D $dbsnp",
+                       "$GATK_pre UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw.indels.vcf -glm INDEL -D $mills",
+                       "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $name.raw.snvs.vcf   -mG 6 -mode SNP   -resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0 $hapmap -resource:omni,VCF,known=false,training=true,truth=false,prior=12.0 $omni -resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0 $dbsnp -an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an MQ -an FS -an DP -recalFile snvs.recal.out -tranchesFile snvs.tranches.out",
+                       "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $name.raw.indels.vcf -mG 6 -mode INDEL -resource:mills,VCF,known=true,training=true,truth=true,prior=12.0 $mills -an QD -an ReadPosRankSum -an InbreedingCoeff -an FS -recalFile indels.recal.out -tranchesFile indels.tranches.out",
+                       "$GATK_pre ApplyRecalibration -R $ref -input $name.snvs.vcf   -ts_filter_level 99.0 -tranchesFile snvs.tranches.out   -recalFile snvs.recal.out   -o $name.recalibrated.snvs.vcf",
+                       "$GATK_pre ApplyRecalibration -R $ref -input $name.indels.vcf -ts_filter_level 99.0 -tranchesFile indels.tranches.out -recalFile indels.recal.out -o $name.recalibrated.indels.vcf",
+                       "cat $name.recalibrated.snvs.vcf   | grep -P '^#' > $name.hard.snvs.vcf",
+                       "cat $name.recalibrated.snvs.vcf   | grep -P '^#' > $name.pass.snvs.vcf",
+                       "cat $name.recalibrated.indels.vcf | grep -P '^#' > $name.hard.indels.vcf",
+                       "cat $name.recalibrated.indels.vcf | grep -P '^#' > $name.pass.indels.vcf",
+                       "cat $name.recalibrated.snvs.vcf   | grep PASS >> $name.pass.snvs.vcf",
+                       "cat $name.recalibrated.indels.vcf | grep PASS >> $name.pass.indels.vcf",
+                       "$GATK_pre VariantFiltration -R $ref -V $name.recalibrated.snvs.vcf   -o $name.all.snvs.vcf   -filter 'QD < 2.0 || MQ < 40.0 || FS > 60.0 HaplotypeScore > 13.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0' -filterName 'hard_filters'",
+                       "$GATK_pre VariantFiltration -R $ref -V $name.recalibrated.indels.vcf -o $name.all.indels.vcf -filter 'QD < 2.0 || ReadPosRankSum < -20.0 || InbreedingCoeff < -0.8 || FS > 200.0' -filterName 'hard_filters'",
+                       "cat $name.all.snvs.vcf   | grep hard_filters >> $name.hard.snvs.vcf",
+                       "cat $name.all.indels.vcf | grep hard_filters >> $name.hard.indels.vcf",
+                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.snvs.html        -v -i vcf -o txt hg19 $name.pass.snvs.vcf   > $name.snvs.txt",
+                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.indels.html      -v -i vcf -o txt hg19 $name.pass.indels.vcf > $name.indels.txt",
+                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.hard.snvs.html   -v -i vcf -o txt hg19 $name.hard.snvs.vcf   > $name.hard.snvs.txt",
+                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.hard.indels.html -v -i vcf -o txt hg19 $name.hard.indels.vcf > $name.hard.indels.txt",
                      );
 
-    my $nom    = "00";
+    my $nom;
     chomp ( $time = `date +%T` );
     print "[$time][- / -] Working on sample $name.\n";
     for ( my $i = $step; $i < @steps; $i++ )
     {
+        $nom = sprintf ( "%02d", $i );
         my $current_step = $steps[$i];
         chomp ( $time = `date +%T` );
         my ($clean_step) = $current_step;
         $clean_step =~ s/ -/\n                  -/g if length ($clean_step) > 256;
         print "[$time][$nom/$#steps] Running this step: \n\n", " "x18, "$clean_step\n\n";
         system ( $current_step );
-        $nom = sprintf ( "%02d", ++$nom);
     }
    #system ( "mkdir $name; mv $name.* $name;" ); 
 }
