@@ -80,9 +80,9 @@ for ( my $i = 0; $i < @reads; $i += 2 )
                        "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.hard.indels.html -v -i vcf -o txt hg19 $name.hard.indels.vcf > $name.hard.indels.txt",
                      );
 
-    my $nom;
     chomp ( $time = `date +%T` );
     print "[$time][- / -] Working on sample $name.\n";
+    my $nom;
     for ( my $i = $step; $i < @steps; $i++ )
     {
         $nom = sprintf ( "%02d", $i );
