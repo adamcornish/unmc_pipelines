@@ -49,7 +49,7 @@ for ( my $i = 0; $i < @reads; $i += 2 )
     my $JAVA_pre = "java -Xmx${memory}g -jar";
     my $GATK_pre   = "$JAVA_pre $gatk -T";
     my @steps      = (
-                       "bowtie2 --local -x $bt2_idx -p $threads -1 $R1 -2 $R2 -S $name.sam",
+                       "bowtie2 --local-very-sensitive -x $bt2_idx -p $threads -1 $R1 -2 $R2 -S $name.sam",
                        "samtools view -bS $name.sam -o $name.bam",
                        "$JAVA_pre $bin/SortSam.jar INPUT=$name.bam OUTPUT=$name.sorted.bam SORT_ORDER=coordinate VALIDATION_STRINGENCY=SILENT",
                        "$JAVA_pre $bin/AddOrReplaceReadGroups.jar I=$name.sorted.bam O=$name.fixed_RG.bam SO=coordinate RGID=$name RGLB=$name RGPL=illumina RGPU=$name RGSM=$name VALIDATION_STRINGENCY=LENIENT CREATE_INDEX=true",
@@ -61,9 +61,9 @@ for ( my $i = 0; $i < @reads; $i += 2 )
                        "$GATK_pre UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw.snvs.vcf   -glm SNP   -D $dbsnp",
                        "$GATK_pre UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw.indels.vcf -glm INDEL -D $mills",
                        "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $name.raw.snvs.vcf   -mG 6 -mode SNP   -resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0 $hapmap -resource:omni,VCF,known=false,training=true,truth=false,prior=12.0 $omni -resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0 $dbsnp -an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an MQ -an FS -an DP -recalFile snvs.recal.out -tranchesFile snvs.tranches.out",
-                       "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $name.raw.indels.vcf -mG 6 -mode INDEL -resource:mills,VCF,known=true,training=true,truth=true,prior=12.0 $mills -an QD -an ReadPosRankSum -an InbreedingCoeff -an FS -recalFile indels.recal.out -tranchesFile indels.tranches.out",
-                       "$GATK_pre ApplyRecalibration -R $ref -input $name.snvs.vcf   -ts_filter_level 99.0 -tranchesFile snvs.tranches.out   -recalFile snvs.recal.out   -o $name.recalibrated.snvs.vcf",
-                       "$GATK_pre ApplyRecalibration -R $ref -input $name.indels.vcf -ts_filter_level 99.0 -tranchesFile indels.tranches.out -recalFile indels.recal.out -o $name.recalibrated.indels.vcf",
+                       "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $name.raw.indels.vcf -mG 6 -mode INDEL -resource:mills,VCF,known=true,training=true,truth=true,prior=12.0 $mills -an QD -an ReadPosRankSum -an FS -recalFile indels.recal.out -tranchesFile indels.tranches.out",
+                       "$GATK_pre ApplyRecalibration -R $ref -input $name.raw.snvs.vcf   -ts_filter_level 99.0 -tranchesFile snvs.tranches.out   -recalFile snvs.recal.out   -o $name.recalibrated.snvs.vcf",
+                       "$GATK_pre ApplyRecalibration -R $ref -input $name.raw.indels.vcf -ts_filter_level 99.0 -tranchesFile indels.tranches.out -recalFile indels.recal.out -o $name.recalibrated.indels.vcf",
                        "cat $name.recalibrated.snvs.vcf   | grep -P '^#' > $name.hard.snvs.vcf",
                        "cat $name.recalibrated.snvs.vcf   | grep -P '^#' > $name.pass.snvs.vcf",
                        "cat $name.recalibrated.indels.vcf | grep -P '^#' > $name.hard.indels.vcf",
@@ -71,12 +71,12 @@ for ( my $i = 0; $i < @reads; $i += 2 )
                        "cat $name.recalibrated.snvs.vcf   | grep PASS >> $name.pass.snvs.vcf",
                        "cat $name.recalibrated.indels.vcf | grep PASS >> $name.pass.indels.vcf",
                        "$GATK_pre VariantFiltration -R $ref -V $name.recalibrated.snvs.vcf   -o $name.all.snvs.vcf   -filter 'QD < 2.0 || MQ < 40.0 || FS > 60.0 HaplotypeScore > 13.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0' -filterName 'hard_filters'",
-                       "$GATK_pre VariantFiltration -R $ref -V $name.recalibrated.indels.vcf -o $name.all.indels.vcf -filter 'QD < 2.0 || ReadPosRankSum < -20.0 || InbreedingCoeff < -0.8 || FS > 200.0' -filterName 'hard_filters'",
+                       "$GATK_pre VariantFiltration -R $ref -V $name.recalibrated.indels.vcf -o $name.all.indels.vcf -filter 'QD < 2.0 || ReadPosRankSum < -20.0 || FS > 200.0' -filterName 'hard_filters'",
                        "cat $name.all.snvs.vcf   | grep hard_filters >> $name.hard.snvs.vcf",
                        "cat $name.all.indels.vcf | grep hard_filters >> $name.hard.indels.vcf",
-                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.snvs.html        -v -i vcf -o txt hg19 $name.pass.snvs.vcf   > $name.snvs.txt",
-                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.indels.html      -v -i vcf -o txt hg19 $name.pass.indels.vcf > $name.indels.txt",
+                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.pass.snvs.html   -v -i vcf -o txt hg19 $name.pass.snvs.vcf   > $name.pass.snvs.txt",
                        "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.hard.snvs.html   -v -i vcf -o txt hg19 $name.hard.snvs.vcf   > $name.hard.snvs.txt",
+                       "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.pass.indels.html -v -i vcf -o txt hg19 $name.pass.indels.vcf > $name.pass.indels.txt",
                        "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.hard.indels.html -v -i vcf -o txt hg19 $name.hard.indels.vcf > $name.hard.indels.txt",
                      );
 
