@@ -28,10 +28,9 @@ foreach my $item ( @list )
         foreach my $effect ( @effects )
         {
             my ($loc, $parens) = $effect =~ /(.+?)\((.+?)\)/;
-            my ($impact,$type,$codon,$aa,$gene,$rna,$coding,$acc,$exon) = split "|", $parens;
-            print "$split[0]\t$split[1]\t$split[2]\t$split[3]\t$split[4]\t$loc\t$impact\t$type\t$codon\t$aa\t$gene\t$acc\t$exon\t";
-            <>;
-            print OUT "$split[0]\t$split[1]\t$split[2]\t$split[3]\t$split[4]\t$loc\t$impact\t$type\t$codon\t$aa\t$gene\t$acc\t$exon\t";
+            my ($impact,$type,$codon,$aa,$gene,$rna,$coding,$acc,$exon) = split /\|/, $parens;
+            print "$split[0]\t$split[1]\t$split[2]\t$split[3]\t$split[4]\t$loc\t$impact\t$type\t$codon\t$aa\t$gene\t$acc\t$exon\t\n";
+            print OUT "$split[0]\t$split[1]\t$split[2]\t$split[3]\t$split[4]\t$loc\t$impact\t$type\t$codon\t$aa\t$gene\t$acc\t$exon\t\n";
         }
     }
 }
