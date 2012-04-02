@@ -12,7 +12,6 @@ foreach my $datum ( @data )
     my ($chr)   = $datum =~ /^(\S+)/;
     if ( $curr ne $chr )
     {
-        my ($id) = $chr =~ /chr(.+)/;
         print "Reading in $chr.\n";
         @db = `cat /data/genomes/Homo_sapiens/UCSC/hg19/Annotation/Variation/dbNSFP/$chr | grep -vP '^#'`;
         print "Done reading the db.\n";
