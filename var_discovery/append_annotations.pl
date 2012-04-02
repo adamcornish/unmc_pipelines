@@ -12,11 +12,10 @@ foreach my $datum ( @data )
     my ($chr)   = $datum =~ /^(\S+)/;
     if ( $curr ne $chr )
     {
+        my ($id) = $chr =~ /chr(.+)/;
         print "Reading in $chr.\n";
         @db = `cat /data/genomes/Homo_sapiens/UCSC/hg19/Annotation/Variation/dbNSFP/$chr | grep -vP '^#'`;
-        print "Sorting the db.\n";
-        @db = map { $_->[0] } sort { $a->[1] <=> $b->[1] } map { [$_, /\S+\s\S+\s\S+\s\S+\s\S+\s\S+\s(\S+)/s] } @db;
-        print "Done reading and sorting the db.\n";
+        print "Done reading the db.\n";
         $curr = $chr;
     }
     my @split   = split "\t", $datum;
@@ -35,7 +34,7 @@ foreach my $datum ( @data )
             if ( $result )
             {
                 my @col = split "\t", $result;
-                my $out = "\t$col[16]\t$col[17]\t$col[18]\t$col[19]\t$col[20]\t$col[21]\t$col[22]\t$col[23]\t$col[24]\t$col[25]";
+                my $out = "\t$col[7]\t$col[8]\t$col[9]\t$col[10]\t$col[11]\t$col[12]\t$col[13]";
                 print OUT $out;
             }
         }
