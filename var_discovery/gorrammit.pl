@@ -78,8 +78,6 @@ for ( my $i = 0; $i < @reads; $i += 2 )
                        "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.hard.snvs.html   -v -i vcf -o txt hg19 $name.hard.snvs.vcf   > $name.hard.snvs.txt",
                        "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.pass.indels.html -v -i vcf -o txt hg19 $name.pass.indels.vcf > $name.pass.indels.txt",
                        "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.hard.indels.html -v -i vcf -o txt hg19 $name.hard.indels.vcf > $name.hard.indels.txt",
-                       "append_annotations.pl $name.pass.snvs.txt",
-                       "append_annotations.pl $name.hard.snvs.txt",
                      );
 
     chomp ( $time = `date +%T` );
