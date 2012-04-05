@@ -24,9 +24,9 @@ my $hapmap    = "$ref_dir/Annotation/Variation/hapmap.vcf";
 my $mills     = "$ref_dir/Annotation/Variation/indels.vcf";
 my $exome_bed = "$ref_dir/Annotation/Genes/refSeq_genes.bed";
 my $ref       = "$ref_dir/Sequence/WholeGenomeFasta/ucsc.hg19.fasta";
-die "There are no read 1 fastq reads in $reads_dir. The read 1 reads must be formatted as follows: *_R1.fastq.\n" unless ( `ls $reads_dir/*_R1.fastq` );
-die "There are no read 2 fastq reads in $reads_dir. The read 2 reads must be formatted as follows: *_R2.fastq.\n" unless ( `ls $reads_dir/*_R2.fastq` );
-chomp ( my @reads  = `ls $reads_dir/*fastq` );
+die "There are no read 1 fastq reads in $reads_dir. The read 1 reads must be formatted as follows: *_R1.fastq.\n" unless ( `ls $reads_dir/*_R1.fastq*` );
+die "There are no read 2 fastq reads in $reads_dir. The read 2 reads must be formatted as follows: *_R2.fastq.\n" unless ( `ls $reads_dir/*_R2.fastq*` );
+chomp ( my @reads  = `ls $reads_dir/*fastq*` );
 chomp ( my $time   = `date +%T` );
 
 print "Options used     :\n",
@@ -49,7 +49,7 @@ for ( my $i = 0; $i < @reads; $i += 2 )
     my $JAVA_pre = "java -Xmx${memory}g -jar";
     my $GATK_pre   = "$JAVA_pre $gatk -T";
     my @steps      = (
-                       "bowtie2 --local-very-sensitive -x $bt2_idx -p $threads -1 $R1 -2 $R2 -S $name.sam",
+                       "bowtie2 --very-sensitive-local -x $bt2_idx -p $threads -1 $R1 -2 $R2 -S $name.sam",
                        "samtools view -bS $name.sam -o $name.bam",
                        "$JAVA_pre $bin/SortSam.jar INPUT=$name.bam OUTPUT=$name.sorted.bam SORT_ORDER=coordinate VALIDATION_STRINGENCY=SILENT",
                        "$JAVA_pre $bin/AddOrReplaceReadGroups.jar I=$name.sorted.bam O=$name.fixed_RG.bam SO=coordinate RGID=$name RGLB=$name RGPL=illumina RGPU=$name RGSM=$name VALIDATION_STRINGENCY=LENIENT CREATE_INDEX=true",
