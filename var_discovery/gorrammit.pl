@@ -69,7 +69,7 @@ for ( my $i = 0; $i < @reads; $i += 2 )
                        "cat $name.recalibrated.indels.vcf | grep -P '^#' > $name.pass.indels.vcf",
                        "cat $name.recalibrated.snvs.vcf   | grep PASS >> $name.pass.snvs.vcf",
                        "cat $name.recalibrated.indels.vcf | grep PASS >> $name.pass.indels.vcf",
-                       "$GATK_pre VariantFiltration -R $ref -V $name.recalibrated.snvs.vcf   -o $name.all.snvs.vcf   -filter 'QD < 2.0 || MQ < 40.0 || FS > 60.0 HaplotypeScore > 13.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0' -filterName 'hard_filters'",
+                       "$GATK_pre VariantFiltration -R $ref -V $name.recalibrated.snvs.vcf   -o $name.all.snvs.vcf   -filter 'QD < 2.0 || MQ < 40.0 || FS > 60.0 || HaplotypeScore > 13.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0' -filterName 'hard_filters'",
                        "$GATK_pre VariantFiltration -R $ref -V $name.recalibrated.indels.vcf -o $name.all.indels.vcf -filter 'QD < 2.0 || ReadPosRankSum < -20.0 || FS > 200.0' -filterName 'hard_filters'",
                        "cat $name.all.snvs.vcf   | grep hard_filters >> $name.hard.snvs.vcf",
                        "cat $name.all.indels.vcf | grep hard_filters >> $name.hard.indels.vcf",
