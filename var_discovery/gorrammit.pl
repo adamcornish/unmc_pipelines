@@ -80,6 +80,7 @@ for ( my $i = 0; $i < @reads; $i += 2 )
                        "$GATK_pre UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw.snvs.vcf   -glm SNP   -D $dbsnp",
                        # Step 10
                        "$GATK_pre UnifiedGenotyper -nt $threads -R $ref -I $name.recalibrated.bam -o $name.raw.indels.vcf -glm INDEL -D $mills",
+<<<<<<< HEAD
                        # Step 11
                        "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $name.raw.snvs.vcf   -mG 6 -mode SNP   -resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0 $hapmap -resource:omni,VCF,known=false,training=true,truth=false,prior=12.0 $omni -resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0 $dbsnp -an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an MQ -an FS -an DP -recalFile $name.snvs.recal.out -tranchesFile $name.snvs.tranches.out",
                        # Step 12 
@@ -89,6 +90,12 @@ for ( my $i = 0; $i < @reads; $i += 2 )
                        # Step 14
                        "$GATK_pre ApplyRecalibration -R $ref -input $name.raw.indels.vcf -ts_filter_level 99.0 -tranchesFile $name.indels.tranches.out -recalFile $name.indels.recal.out -o $name.recalibrated.indels.vcf",
                        # Step 15
+=======
+                       "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $name.raw.snvs.vcf   -mG 6 -mode SNP   -resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0 $hapmap -resource:omni,VCF,known=false,training=true,truth=false,prior=12.0 $omni -resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0 $dbsnp -an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an MQ -an FS -an DP -recalFile $name.snvs.recal.out -tranchesFile $name.snvs.tranches.out",
+                       "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $name.raw.indels.vcf -mG 6 -mode INDEL -resource:mills,VCF,known=true,training=true,truth=true,prior=12.0 $mills -an QD -an ReadPosRankSum -an FS -recalFile $name.indels.recal.out -tranchesFile $name.indels.tranches.out",
+                       "$GATK_pre ApplyRecalibration -R $ref -input $name.raw.snvs.vcf   -ts_filter_level 99.0 -tranchesFile $name.snvs.tranches.out   -recalFile snvs.recal.out   -o $name.recalibrated.snvs.vcf",
+                       "$GATK_pre ApplyRecalibration -R $ref -input $name.raw.indels.vcf -ts_filter_level 99.0 -tranchesFile $name.indels.tranches.out -recalFile indels.recal.out -o $name.recalibrated.indels.vcf",
+>>>>>>> 5c8ff66d16a3e0183c42e9f9b61f308309ee3935
                        "cat $name.recalibrated.snvs.vcf   | grep -P '^#' > $name.hard.snvs.vcf",
                        # Step 16
                        "cat $name.recalibrated.snvs.vcf   | grep -P '^#' > $name.pass.snvs.vcf",
