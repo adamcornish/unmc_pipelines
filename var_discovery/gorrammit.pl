@@ -47,15 +47,15 @@ for ( my $i = 0; $i < @reads; $i += 2 )
     my $R2         = $reads[$i+1];
     my $JAVA_pre   = "java -Xmx${memory}g -jar";
     my $GATK_pre   = "$JAVA_pre $gatk -T";
-    my $snpFilters = "-filter 'QD < 2.0' -filterName 'QD'",
-                     "-filter 'MQ < 40.0' -filterName 'MQ'",
-                     "-filter 'FS > 60.0' -filterName 'FS'",
-                     "-filter 'HaplotypeScore > 13.0' -filterName 'HaplotypeScore'",
-                     "-filter 'MQRankSum < -12.5' -filtername 'MQRankSum'",
+    my $snpFilters = "-filter 'QD < 2.0' -filterName 'QD' ".
+                     "-filter 'MQ < 40.0' -filterName 'MQ' ".
+                     "-filter 'FS > 60.0' -filterName 'FS' ".
+                     "-filter 'HaplotypeScore > 13.0' -filterName 'HaplotypeScore' ".
+                     "-filter 'MQRankSum < -12.5' -filterName 'MQRankSum' ".
                      "-filter 'ReadPosRankSum < -8.0' -filterName 'ReadPosRankSum'";
-    my $indelFilts = "-filter 'QD < 2.0' -filterName 'QD'",
-                     "-filter 'ReadPosRankSum < -20.0' -filterName 'ReadPosRankSum'",
-                     "-filter 'FS > 200.0' -filterName 'FS'",
+    my $indelFilts = "-filter 'QD < 2.0' -filterName 'QD' ".
+                     "-filter 'ReadPosRankSum < -20.0' -filterName 'ReadPosRankSum' ".
+                     "-filter 'FS > 200.0' -filterName 'FS' ".
                      "-filter 'InbreedingCoeff < -0.8' -filterName 'InbreedingCoeff'";
     my @steps      = (
                        # Step 0
@@ -89,32 +89,28 @@ for ( my $i = 0; $i < @reads; $i += 2 )
                        # Step 14
                        "$GATK_pre ApplyRecalibration -R $ref -input $name.raw.indels.vcf -ts_filter_level 99.0 -tranchesFile $name.indels.tranches.out -recalFile $name.indels.recal.out -o $name.recalibrated.indels.vcf",
                        # Step 15
-                       "cat $name.recalibrated.snvs.vcf   | grep -P '^#' > $name.hard.snvs.vcf",
-                       # Step 16
-                       "cat $name.recalibrated.snvs.vcf   | grep -P '^#' > $name.pass.snvs.vcf",
-                       # Step 17
-                       "cat $name.recalibrated.indels.vcf | grep -P '^#' > $name.hard.indels.vcf",
-                       # Step 18
-                       "cat $name.recalibrated.indels.vcf | grep -P '^#' > $name.pass.indels.vcf",
-                       # Step 19
-                       "cat $name.recalibrated.snvs.vcf   | grep PASS >> $name.pass.snvs.vcf",
-                       # Step 20
-                       "cat $name.recalibrated.indels.vcf | grep PASS >> $name.pass.indels.vcf",
-                       # Step 21
                        "$GATK_pre VariantFiltration -R $ref -V $name.recalibrated.snvs.vcf   -o $name.all.snvs.vcf   $snpFilters",
-                       # Step 22
+                       # Step 16
                        "$GATK_pre VariantFiltration -R $ref -V $name.recalibrated.indels.vcf -o $name.all.indels.vcf $indelFilts",
+                       # Step 17
+                       "cat $name.all.snvs.vcf   | grep -v PASS > $name.hard.snvs.vcf",
+                       # Step 18
+                       "cat $name.all.snvs.vcf   | grep -P '^#' > $name.pass.snvs.vcf",
+                       # Step 19
+                       "cat $name.all.snvs.vcf   | grep PASS >> $name.pass.snvs.vcf",
+                       # Step 20
+                       "cat $name.all.indels.vcf | grep -v PASS > $name.hard.indels.vcf",
+                       # Step 21
+                       "cat $name.all.indels.vcf | grep -P '^#' > $name.pass.indels.vcf",
+                       # Step 22
+                       "cat $name.all.indels.vcf | grep PASS >> $name.pass.indels.vcf",
                        # Step 23
-                       "cat $name.all.snvs.vcf   | grep -v PASS >> $name.hard.snvs.vcf",
-                       # Step 24
-                       "cat $name.all.indels.vcf | grep -v PASS >> $name.hard.indels.vcf",
-                       # Step 25
                        "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.pass.snvs.html   -v -i vcf -o txt hg19 $name.pass.snvs.vcf   > $name.pass.snvs.txt",
-                       # Step 26
+                       # Step 24
                        "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.hard.snvs.html   -v -i vcf -o txt hg19 $name.hard.snvs.vcf   > $name.hard.snvs.txt",
-                       # Step 27
+                       # Step 25
                        "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.pass.indels.html -v -i vcf -o txt hg19 $name.pass.indels.vcf > $name.pass.indels.txt",
-                       # Step 28
+                       # Step 26
                        "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$name.hard.indels.html -v -i vcf -o txt hg19 $name.hard.indels.vcf > $name.hard.indels.txt",
                      );
 
@@ -129,9 +125,9 @@ for ( my $i = 0; $i < @reads; $i += 2 )
         my ($clean_step) = $current_step;
         $clean_step =~ s/ -/\n                  -/g if length ($clean_step) > 256;
         print "[$time][$nom/$#steps] Running this step: \n\n", " "x18, "$clean_step\n\n";
+        print "current_step: $current_step\n";
         system ( $current_step );
     }
-   #system ( "mkdir $name; mv $name.* $name;" ); 
 }
 
 sub usage
