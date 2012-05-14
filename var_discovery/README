@@ -2,7 +2,7 @@ This is the pipeline to run variant calling using GATK when given a single sampl
 
 The script can be run from any folder, but note that the output files will be placed in the folder that you run the script from.
 
-Usage: perl run_gorrammit.pl <configuration_file.txt>
+Usage: perl gorrammit.pl <configuration_file.txt>
 
     Your configuration file MUST have a READS_DIR specified.
 

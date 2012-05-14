@@ -41,7 +41,7 @@ foreach my $file ( @files )
                 if ( $result )
                 {
                     my @col = split "\t", $result;
-                    my $out = "\t$col[7]\t$col[8]\t$col[9]\t$col[10]\t$col[12]\n";
+                    my $out = "\t$col[7]\t$col[8]\t$col[9]\t$col[10]\t$col[12]";
                     print OUT $out;
                 }
             }
