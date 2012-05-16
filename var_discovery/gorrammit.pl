@@ -48,12 +48,14 @@ for ( my $i = 0; $i < @reads; $i += 2 )
     my $JAVA_pre   = "java -Xmx${memory}g -jar";
     my $GATK_pre   = "$JAVA_pre $gatk -T";
     my $snpFilters = "-filter 'QD < 2.0' -filterName 'QD' ".
+                     "-filter 'DP < 8' -filterName 'DP' ".
                      "-filter 'MQ < 40.0' -filterName 'MQ' ".
                      "-filter 'FS > 60.0' -filterName 'FS' ".
                      "-filter 'HaplotypeScore > 13.0' -filterName 'HaplotypeScore' ".
                      "-filter 'MQRankSum < -12.5' -filterName 'MQRankSum' ".
                      "-filter 'ReadPosRankSum < -8.0' -filterName 'ReadPosRankSum'";
     my $indelFilts = "-filter 'QD < 2.0' -filterName 'QD' ".
+                     "-filter 'DP < 8' -filterName 'DP' ".
                      "-filter 'ReadPosRankSum < -20.0' -filterName 'ReadPosRankSum' ".
                      "-filter 'FS > 200.0' -filterName 'FS' ".
                      "-filter 'InbreedingCoeff < -0.8' -filterName 'InbreedingCoeff'";
