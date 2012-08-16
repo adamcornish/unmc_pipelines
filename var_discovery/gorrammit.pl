@@ -63,7 +63,7 @@ for ( my $i = 0; $i < @reads; $i += 2 )
                        "bowtie2 --very-sensitive-local -x $bt2_idx -p $threads -1 $R1 -2 $R2 -S $name.sam",
                        "samtools view -bS $name.sam -o $name.bam",
                        "$JAVA_pre $bin/SortSam.jar INPUT=$name.bam OUTPUT=$name.sorted.bam SORT_ORDER=coordinate VALIDATION_STRINGENCY=SILENT",
-                       "$JAVA_pre $bin/MarkDuplicates.jar I=$name.sorted.bam O=$name.dup_removed.bam REMOVE_DUPLICATES=true",
+                       "$JAVA_pre $bin/MarkDuplicates.jar I=$name.sorted.bam O=$name.dup_removed.bam REMOVE_DUPLICATES=true M=mark_dups_metrics_file",
                        "$JAVA_pre $bin/AddOrReplaceReadGroups.jar I=$name.sorted.bam O=$name.fixed_RG.bam SO=coordinate RGID=$name RGLB=$name RGPL=illumina RGPU=$name RGSM=$name VALIDATION_STRINGENCY=LENIENT CREATE_INDEX=true",
                        "$GATK_pre RealignerTargetCreator -R $ref -I $name.fixed_RG.bam -known $dbsnp -o $name.indel_realigner.intervals",
                        "$GATK_pre IndelRealigner -R $ref -I $name.fixed_RG.bam -known $dbsnp -o $name.indels_realigned.bam --maxReadsForRealignment 100000 --maxReadsInMemory 1000000 -targetIntervals $name.indel_realigner.intervals",
