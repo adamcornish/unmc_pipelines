@@ -49,29 +49,16 @@ for ( my $i = 0; $i < @reads; $i += 2 )
     my ($name)      = $reads[$i] =~ /^.+\/(.+?)_/;
     my $R1          = $reads[$i];
     my $R2          = $reads[$i+1];
-    my $JAVA_pre    = "java -Xmx${memory}g -jar";
-    my @align_steps = (
-                       "bowtie2 --very-sensitive-local -x $bt2_idx -p $threads -1 $R1 -2 $R2 -S $name.sam", #0
-                       "samtools view -bS $name.sam -o $name.bam",
-                       "$JAVA_pre $bin/SortSam.jar INPUT=$name.bam OUTPUT=$name.sorted.bam SORT_ORDER=coordinate VALIDATION_STRINGENCY=SILENT",
-                       "$JAVA_pre $bin/MarkDuplicates.jar I=$name.sorted.bam O=$name.dup_removed.bam REMOVE_DUPLICATES=true M=mark_dups_metrics_file",
-                       "$JAVA_pre $bin/AddOrReplaceReadGroups.jar I=$name.sorted.bam O=$name.fixed_RG.bam SO=coordinate RGID=$name RGLB=$name RGPL=illumina RGPU=$name RGSM=$name VALIDATION_STRINGENCY=LENIENT CREATE_INDEX=true"
-                       );
-    chomp ( $time = `date +%T` );
-    my $nom = sprintf ( "%02d", $i );
-    print "[$time] Working on sample $name.\n";
-    for ( my $i = $step; $i < @align_steps; $i++ )
-    {
-        my $current_step = $align_steps[$i];
-        chomp ( $time = `date +%T` );
-        my ($clean_step) = $current_step;
-        $clean_step =~ s/ -/\n                  -/g if length ($clean_step) > 256;
-        print "[$time][$nom/$#align_steps]  Running this step: \n\n", " "x18, "$clean_step\n\n";
-        system ( $current_step );
-    };
+    system ( "nohop run_alignments.pl -1 $r1 -2 $r2 -n $name -m $memory -b $bin > run_alignments_$name.nohup &" );
 }
 
-chomp ( my @names = `ls $reads_dir/*fastq* | sed 's/_R.*fastq.*//' | uniq` );
+while ( 1 )
+{
+    my @done = `ls *done`;
+    @done != @reads/2 ? sleep 10 : next;
+}
+
+chomp ( my @names = `ls $reads_dir/*fastq* | sed 's/_R.*fastq//' | uniq` );
 my $JAVA_pre = "java -Xmx${memory}g -jar";
 my $GATK_pre = "$JAVA_pre $gatk -T";
 my $filters  = "-filter 'QD < 2.0' -filterName 'QD' ".
