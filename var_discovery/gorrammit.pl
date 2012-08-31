@@ -39,7 +39,7 @@ print "Options used     :\n",
       "\tTHREADS  : $threads\n",
       "\tMEMORY   : $memory\n",
       "\tREADS_DIR: $reads_dir\n",
-      "\tSTEP     : $step\n"
+      "\tSTEP     : $step\n",
       "\tNAME     : $exp_name\n";
 
 ######## End Variables ########
@@ -58,14 +58,15 @@ for ( my $i = 0; $i < @reads; $i += 2 )
                        "$JAVA_pre $bin/AddOrReplaceReadGroups.jar I=$name.sorted.bam O=$name.fixed_RG.bam SO=coordinate RGID=$name RGLB=$name RGPL=illumina RGPU=$name RGSM=$name VALIDATION_STRINGENCY=LENIENT CREATE_INDEX=true"
                        );
     chomp ( $time = `date +%T` );
+    my $nom = sprintf ( "%02d", $i );
     print "[$time] Working on sample $name.\n";
-    for ( my $i = $step; $i < @steps; $i++ )
+    for ( my $i = $step; $i < @align_steps; $i++ )
     {
-        my $current_step = $steps[$i];
+        my $current_step = $align_steps[$i];
         chomp ( $time = `date +%T` );
         my ($clean_step) = $current_step;
         $clean_step =~ s/ -/\n                  -/g if length ($clean_step) > 256;
-        print "[$time] Running this step: \n\n", " "x18, "$clean_step\n\n";
+        print "[$time][$nom/$#align_steps]  Running this step: \n\n", " "x18, "$clean_step\n\n";
         system ( $current_step );
     };
 }
@@ -108,14 +109,15 @@ my @gatk = (
            );
 
 chomp ( $time = `date +%T` );
-print "[$time] Working on sample $name.\n";
-for ( my $i = $step; $i < @steps; $i++ )
+print "[$time] Working on all samples.\n";
+for ( my $i = $step; $i < @gatk; $i++ )
 {
-    my $current_step = $steps[$i];
+    my $current_step = $gatk[$i];
+    my $nom = sprintf ( "%02d", $i );
     chomp ( $time = `date +%T` );
     my ($clean_step) = $current_step;
     $clean_step =~ s/ -/\n                  -/g if length ($clean_step) > 256;
-    print "[$time][$nom/$#steps] Running this step: \n\n", " "x18, "$clean_step\n\n";
+    print "[$time][$nom/$#gatk] Running this step: \n\n", " "x18, "$clean_step\n\n";
     system ( $current_step );
 }
 
