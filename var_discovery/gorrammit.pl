@@ -74,6 +74,7 @@ my $fixed_RG = "";
 foreach my $name ( @names ) { $fixed_RG .= "-I $name.fixed_RG.bam "; }
 
 my @gatk = (
+            #"$GATK_pre BaseRecalibrator -nt $threads -R $ref -knownSites $dbsnp -o recal_data.grp $fixed_RG", # cannot enable this until GATK 2.2 since it is currently broken
              "$GATK_pre BaseRecalibrator -R $ref -knownSites $dbsnp -o recal_data.grp $fixed_RG",
              "$GATK_pre PrintReads -R $ref -BQSR recal_data.grp -o $exp_name.BQSR.bam $fixed_RG",
             #"$GATK_pre ReduceReads -R $ref -I BQSR.bam -o reduced.bam", # only use this if you're using UnifiedGenotyper; it doesn't work well with HaplotypeCaller
