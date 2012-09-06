@@ -11,10 +11,9 @@ usage() if $config !~ /READS_DIR/;
 
 my $bin       = ( $config =~ /BIN\s+(\S+)/ )       ? $1 : "/opt/var_calling";
 my $snpEff    = ( $config =~ /SNPEFF\s+(\S+)/ )    ? $1 : "/opt/snpeff";
-my $ref_dir   = ( $config =~ /REF_DIR\s+(\S+)/ )   ? $1 : "/data/genomes/Homo_sapiens/UCSC/hg19";
+my $ref_dir   = ( $config =~ /REF_DIR\s+(\S+)/ )   ? $1 : "/safer/genomes/Homo_sapiens/UCSC/hg19";
 my $bt2_idx   = ( $config =~ /BT2\s+(\S+)/ )       ? $1 : "$ref_dir/Sequence/BowtieIndex/ucsc.hg19";
 my $threads   = ( $config =~ /THREADS\s+(\S+)/ )   ? $1 : "24";
-my $memory    = ( $config =~ /MEMORY\s+(\S+)/ )    ? $1 : "48";
 my $reads_dir = ( $config =~ /READS_DIR\s+(\S+)/ ) ? $1 : ".";
 my $step      = ( $config =~ /STEP\s+(\S+)/ )      ? $1 : "0";
 my $exp_name  = ( $config =~ /NAME\s+(\S+)/ )      ? $1 : "experiment";
@@ -37,7 +36,6 @@ print "Options used     :\n",
       "\tREF_DIR  : $ref_dir\n",
       "\tBT2_IDX  : $bt2_idx\n",
       "\tTHREADS  : $threads\n",
-      "\tMEMORY   : $memory\n",
       "\tREADS_DIR: $reads_dir\n",
       "\tSTEP     : $step\n",
       "\tNAME     : $exp_name\n";
@@ -49,17 +47,21 @@ for ( my $i = 0; $i < @reads; $i += 2 )
     my ($name)      = $reads[$i] =~ /^.+\/(.+?)_/;
     my $R1          = $reads[$i];
     my $R2          = $reads[$i+1];
-    system ( "nohop run_alignments.pl -1 $r1 -2 $r2 -n $name -m $memory -b $bin > run_alignments_$name.nohup &" );
+    my $div_threads = sprintf ( "%d", $threads / (@reads / 2)); # divide threads by the number of samples so as not to overtax the system
+    system ( "nohup run_alignments.pl -1 $R1 -2 $R2 -n $name -b $bin -p $div_threads -x $bt2_idx > run_alignments_$name.nohup &" );
 }
 
-while ( 1 )
+my $skip = 1;
+while ( $skip )
 {
-    my @done = `ls *done`;
-    @done != @reads/2 ? sleep 10 : next;
+    my @done = `ls *done 2>/dev/null`;
+   #print "done   : ", ($#done+1), "\n", "reads/2: ", ($#reads+1)/2, "\n";
+    if ( @done != @reads/2 ) { sleep 10 } 
+    else { $skip = 0 };
 }
 
 chomp ( my @names = `ls $reads_dir/*fastq* | sed 's/_R.*fastq//' | uniq` );
-my $JAVA_pre = "java -Xmx${memory}g -jar";
+my $JAVA_pre = "java -jar";
 my $GATK_pre = "$JAVA_pre $gatk -T";
 my $filters  = "-filter 'QD < 2.0' -filterName 'QD' ".
                "-filter 'DP < 8' -filterName 'DP' ".
@@ -67,20 +69,20 @@ my $filters  = "-filter 'QD < 2.0' -filterName 'QD' ".
                "-filter 'FS > 60.0' -filterName 'FS' ".
                "-filter 'HaplotypeScore > 13.0' -filterName 'HaplotypeScore' ".
                "-filter 'MQRankSum < -12.5' -filterName 'MQRankSum' ".
-               "-filter 'ReadPosRankSum < -8.0' -filterName 'ReadPosRankSum'",
+               "-filter 'ReadPosRankSum < -8.0' -filterName 'ReadPosRankSum'".
                "-filter 'InbreedingCoeff < -0.8' -filterName 'InbreedingCoeff'";
 my $fixed_RG = "";
 foreach my $name ( @names ) { $fixed_RG .= "-I $name.fixed_RG.bam "; }
 
 my @gatk = (
-            #"$GATK_pre BaseRecalibrator -R $ref -knownSites $dbsnp -o recal_data.grp $fixed_RG",
-            #"$GATK_pre PrintReads -BQSR recal_data.grp -R $FASTA -o BQSR.bam -I $fixed_RG",
+             "$GATK_pre BaseRecalibrator -R $ref -knownSites $dbsnp -o recal_data.grp $fixed_RG",
+             "$GATK_pre PrintReads -R $ref -BQSR recal_data.grp -o $exp_name.BQSR.bam $fixed_RG",
             #"$GATK_pre ReduceReads -R $ref -I BQSR.bam -o reduced.bam", # only use this if you're using UnifiedGenotyper; it doesn't work well with HaplotypeCaller
-             "$GATK_pre RealignerTargetCreator -R $ref $fixed_RG -known $dbsnp -o $exp_name.indel_realigner.intervals",
+             "$GATK_pre RealignerTargetCreator -R $ref -I $exp_name.BQSR.bam -known $dbsnp -o $exp_name.indel_realigner.intervals",
              "$GATK_pre IndelRealigner -R $ref $fixed_RG -known $dbsnp -o $exp_name.indels_realigned.bam --maxReadsForRealignment 100000 --maxReadsInMemory 1000000 -targetIntervals $exp_name.indel_realigner.intervals",
-             "$GATK_pre CountCovariates -nt $threads -R $ref --knownSites $dbsnp -I $exp_name.indels_realigned.bam -cov ReadGroupCovariate -cov QualityScoreCovariate -cov CycleCovariate -cov DinucCovariate -dP illumina -recalFile $exp_name.recal.csv",
-             "$GATK_pre TableRecalibration -R $ref -I $exp_name.indels_realigned.bam --out $exp_name.recalibrated.bam -recalFile $exp_name.recal.csv",
-             "samtools index $exp_name.recalibrated.bam",
+            #"$GATK_pre CountCovariates -nt $threads -R $ref --knownSites $dbsnp -I $exp_name.indels_realigned.bam -cov ReadGroupCovariate -cov QualityScoreCovariate -cov CycleCovariate -cov DinucCovariate -dP illumina -recalFile $exp_name.recal.csv", # deprecated in version 2
+            #"$GATK_pre TableRecalibration -R $ref -I $exp_name.indels_realigned.bam --out $exp_name.recalibrated.bam -recalFile $exp_name.recal.csv", # deprecated
+            #"samtools index $exp_name.recalibrated.bam",
             #"$GATK_pre UnifiedGenotyper -nt $threads -R $ref recalibrated.bam -o raw.vcf -glm BOTH -D $dbsnp",
              "$GATK_pre HaplotypeCaller -nt $threads -R $ref $exp_name.recalibrated.bam -o $exp_name.raw.vcf -D $dbsnp -stand_call_conf 50.0 -stand_emit_conf 10.0",
             "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $exp_name.raw.vcf -mG 6 -mode BOTH -resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0 $hapmap -resource:omni,VCF,known=false,training=true,truth=false,prior=12.0 $omni -resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0 $dbsnp -resource:mills,VCF,known=true,training=true,truth=true,prior=12.0 $mills -an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an MQ -an FS -an DP -an InbreedingCoeff -recalFile $exp_name.recal.out -tranchesFile $exp_name.tranches.out", #only used with HaplotypeCaller
@@ -124,7 +126,6 @@ sub usage
       REF_DIR   /data/genomes/Homo_sapiens/UCSC/hg19/    Absolute location of the reference directory
       BT2       REF_DIR/Sequence/BowtieIndex/ucsc.hg19   Absolute location of the Bowtie2 index
       THREADS   24                                       Number of threads to use in parallelizable modules
-      MEMORY    48                                       Amount of memory, in gigabytes, to use
       READS_DIR N/A                                      Absolute location of the reads that are going to be used
       STEP      0                                        The step to start at in the pipeline (0-indexed).     
       NAME      experiment                               The name you want to give to this experiment.

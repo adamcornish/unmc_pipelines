@@ -2,8 +2,7 @@ BIN       /opt/var_calling
 SNPEFF    /opt/snpeff
 REF_DIR   /safer/genomes/Homo_sapiens/UCSC/hg19
 BT2       /safer/genomes/Homo_sapiens/UCSC/hg19/Sequence/BowtieIndex/ucsc.hg19
-THREADS   24
-MEMORY    48
-READS_DIR ./
+THREADS   100
+READS_DIR .
 STEP      0
-NAME      Washburne
+NAME      exp_name
