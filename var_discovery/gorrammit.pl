@@ -55,7 +55,6 @@ my $skip = 1;
 while ( $skip )
 {
     my @done = `ls *done 2>/dev/null`;
-   #print "done   : ", ($#done+1), "\n", "reads/2: ", ($#reads+1)/2, "\n";
     if ( @done != @reads/2 ) { sleep 10 } 
     else { $skip = 0 };
 }
@@ -80,8 +79,6 @@ my @gatk = (
             #"$GATK_pre ReduceReads -R $ref -I BQSR.bam -o reduced.bam", # only use this if you're using UnifiedGenotyper; it doesn't work well with HaplotypeCaller
              "$GATK_pre RealignerTargetCreator -R $ref -I $exp_name.BQSR.bam -known $dbsnp -o $exp_name.indel_realigner.intervals",
              "$GATK_pre IndelRealigner -R $ref $fixed_RG -known $dbsnp -o $exp_name.indels_realigned.bam --maxReadsForRealignment 100000 --maxReadsInMemory 1000000 -targetIntervals $exp_name.indel_realigner.intervals",
-            #"$GATK_pre CountCovariates -nt $threads -R $ref --knownSites $dbsnp -I $exp_name.indels_realigned.bam -cov ReadGroupCovariate -cov QualityScoreCovariate -cov CycleCovariate -cov DinucCovariate -dP illumina -recalFile $exp_name.recal.csv", # deprecated in version 2
-            #"$GATK_pre TableRecalibration -R $ref -I $exp_name.indels_realigned.bam --out $exp_name.recalibrated.bam -recalFile $exp_name.recal.csv", # deprecated
             #"samtools index $exp_name.recalibrated.bam",
             #"$GATK_pre UnifiedGenotyper -nt $threads -R $ref recalibrated.bam -o raw.vcf -glm BOTH -D $dbsnp",
              "$GATK_pre HaplotypeCaller -nt $threads -R $ref $exp_name.recalibrated.bam -o $exp_name.raw.vcf -D $dbsnp -stand_call_conf 50.0 -stand_emit_conf 10.0",
