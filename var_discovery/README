@@ -14,6 +14,6 @@ Usage: perl gorrammit.pl <configuration_file.txt>
       REF_DIR   /safer/genomes/Homo_sapiens/UCSC/hg19/   Absolute location of the reference directory
       BT2       REF_DIR/Sequence/BowtieIndex/ucsc.hg19   Absolute location of the Bowtie2 index
       THREADS   24                                       Number of threads to use in parallelizable modules
-      MEMORY    48                                       Amount of memory, in gigabytes, to use
       READS_DIR N/A                                      Absolute location of the reads that are going to be used
       STEP      0                                        The step to start at in the pipeline (0-indexed).
+      NAME      experiment                               The name you want to give to this experiment.

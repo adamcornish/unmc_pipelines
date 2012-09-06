@@ -120,7 +120,7 @@ sub usage
       OPTION    Default                                  Description
       BIN       /opt/var_calling                         Absolute location of the Picard Tools and GATK jar files
       SNPEFF    /opt/snpeff                              Absolute location of snpEff and its requisite files
-      REF_DIR   /data/genomes/Homo_sapiens/UCSC/hg19/    Absolute location of the reference directory
+      REF_DIR   /safer/genomes/Homo_sapiens/UCSC/hg19/   Absolute location of the reference directory
       BT2       REF_DIR/Sequence/BowtieIndex/ucsc.hg19   Absolute location of the Bowtie2 index
       THREADS   24                                       Number of threads to use in parallelizable modules
       READS_DIR N/A                                      Absolute location of the reads that are going to be used
