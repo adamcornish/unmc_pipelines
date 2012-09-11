@@ -16,7 +16,7 @@ my $step     = $opts{s};
 my $gatk     = $opts{G};
 my $ref      = $opts{R};
 my $dbsnp    = $opts{D};
-my $JAVA_pre = "java -jar -Xms4g -Xmx4g";
+my $JAVA_pre = "java -Xms2g -Xmx2g -jar";
 my $GATK_pre = "$JAVA_pre $gatk -T";
 
 chomp ( my $time = `date +%T` );

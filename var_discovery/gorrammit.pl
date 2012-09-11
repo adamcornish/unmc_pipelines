@@ -96,24 +96,25 @@ foreach my $name ( @names ) { $all_bams .= "-I tmp/$name.BQSR.bam "; }
 
 my @gatk = (
    #These options are used when the HaplotypeCaller is used
-            #"$GATK_pre HaplotypeCaller -R $ref -I $exp_name.indels_realigned.bam -o $exp_name.raw.vcf -D $dbsnp -stand_call_conf 50.0 -stand_emit_conf 10.0", # can't multithread so it's sloooooooooooow
+            #"$GATK_pre PrintReads -R $ref $all_bams -o $exp_name.all.bam",
+            #"$GATK_pre HaplotypeCaller -R $ref -I $exp_name.all.bam -o $exp_name.raw.vcf -D $dbsnp -stand_call_conf 50.0 -stand_emit_conf 10.0", # can't multithread so it's sloooooooooooow
             #"$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $exp_name.raw.vcf -mG 6 -mode BOTH -resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0 $hapmap -resource:omni,VCF,known=false,training=true,truth=false,prior=12.0 $omni -resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0 $dbsnp -resource:mills,VCF,known=true,training=true,truth=true,prior=12.0 $mills -an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an MQ -an FS -an DP -an InbreedingCoeff -recalFile $exp_name.recal.out -tranchesFile $exp_name.tranches.out", #only used with HaplotypeCaller
             #"$GATK_pre ApplyRecalibration -R $ref -input $exp_name.raw.vcf -ts_filter_level 99.0 -tranchesFile $exp_name.tranches.out -recalFile $exp_name.recal.out -o $exp_name.recalibrated.vcf",
             #"$GATK_pre VariantFiltration -R $ref -V $exp_name.recalibrated.vcf -o $exp_name.all.vcf $hap_filters",
    #End cut for HaplotypeCaller section
 
    #These options are used when the UnifiedGenotyper is used
+            #"$GATK_pre PrintReads -R $ref $all_bams -o $exp_name.all.bam",
              "$GATK_pre ReduceReads -R $ref $all_bams -o $exp_name.reduced.bam",
-             "samtools index $exp_name.reduced.bam",
-             "$GATK_pre UnifiedGenotyper -nt $threads -R $ref -I $exp_name.reduced.bam -o raw.snv.vcf   -glm SNP   -D $dbsnp",
-             "$GATK_pre UnifiedGenotyper -nt $threads -R $ref -I $exp_name.reduced.bam -o raw.indel.vcf -glm INDEL -D $dbsnp",
-             "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input raw.snv.vcf -mG 6 -mode SNP -resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0 $hapmap -resource:omni,VCF,known=false,training=true,truth=false,prior=12.0 $omni -resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0 $dbsnp -an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an MQ -an FS -an DP -recalFile exp/$exp_name.snv.recal -tranchesFile tmp/$exp_name.snv.model",
-             "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input raw.indel.vcf -mG 6 -mode INDEL -resource:mills,VCF,known=true,training=true,truth=true,prior=12.0 $mills -an QD -an ReadPosRankSum -an FS -recalFile tmp/$exp_name.indel.recal -tranchesFile tmp/$exp_name.indel.model",
-             "$GATK_pre ApplyRecalibration -R $ref -input $exp_name.raw.snv.vcf   -ts_filter_level 99.0 -tranchesFile $exp_name.tranches.out -recalFile $exp_name.snv.recal   -o $exp_name.recalibrated.snv.vcf",
-             "$GATK_pre ApplyRecalibration -R $ref -input $exp_name.raw.indel.vcf -ts_filter_level 95.0 -tranchesFile $exp_name.tranches.out -recalFile $exp_name.indel.recal -o $exp_name.recalibrated.indel.vcf",
-             "$GATK_pre VariantFiltration -R $ref -V $exp_name.snv.recalibrated.vcf   -o $exp_name.filtered.snv.vcf   $snp_filters",
-             "$GATK_pre VariantFiltration -R $ref -V $exp_name.indel.recalibrated.vcf -o $exp_name.filtered.indel.vcf $indel_filts",
-             "$GATK_pre CombineVariants --variant $exp_name.filtered.snv.vcf --variant $exp_name.filtered.indel.vcf -o $exp_name.all.vcf",
+             "$GATK_pre UnifiedGenotyper -nt $threads -R $ref -I $exp_name.reduced.bam -o $exp_name.raw.snv.vcf   -glm SNP   -D $dbsnp",
+             "$GATK_pre UnifiedGenotyper -nt $threads -R $ref -I $exp_name.reduced.bam -o $exp_name.raw.indel.vcf -glm INDEL -D $dbsnp",
+             "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $exp_name.raw.snv.vcf -mG 6 -mode SNP -resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0 $hapmap -resource:omni,VCF,known=false,training=true,truth=false,prior=12.0 $omni -resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0 $dbsnp -an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an MQ -an FS -an DP -recalFile tmp/$exp_name.snv.recal -tranchesFile tmp/$exp_name.snv.model",
+             "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $exp_name.raw.indel.vcf -mG 6 -mode INDEL -resource:mills,VCF,known=true,training=true,truth=true,prior=12.0 $mills -an QD -an ReadPosRankSum -an FS -recalFile tmp/$exp_name.indel.recal -tranchesFile tmp/$exp_name.indel.model",
+             "$GATK_pre ApplyRecalibration -R $ref -input $exp_name.raw.snv.vcf   -ts_filter_level 99.0 -tranchesFile tmp/$exp_name.snv.model   -recalFile tmp/$exp_name.snv.recal   -o $exp_name.recalibrated.snv.vcf",
+             "$GATK_pre ApplyRecalibration -R $ref -input $exp_name.raw.indel.vcf -ts_filter_level 95.0 -tranchesFile tmp/$exp_name.indel.model -recalFile tmp/$exp_name.indel.recal -o $exp_name.recalibrated.indel.vcf",
+             "$GATK_pre VariantFiltration -R $ref -V $exp_name.recalibrated.snv.vcf   -o $exp_name.filtered.snv.vcf   $snp_filters",
+             "$GATK_pre VariantFiltration -R $ref -V $exp_name.recalibrated.indel.vcf -o $exp_name.filtered.indel.vcf $indel_filts",
+             "$GATK_pre CombineVariants -R $ref --variant $exp_name.filtered.snv.vcf --variant $exp_name.filtered.indel.vcf -o $exp_name.all.vcf",
    #End cut for UnifiedGenotyper section
              "grep -P '\\sTruth' $exp_name.all.vcf > $exp_name.hard.vcf",
              "grep -P '^#'       $exp_name.all.vcf > $exp_name.pass.vcf",
