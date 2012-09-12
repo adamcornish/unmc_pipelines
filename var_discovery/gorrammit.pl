@@ -116,9 +116,10 @@ my @gatk = (
              "$GATK_pre VariantFiltration -R $ref -V $exp_name.recalibrated.indel.vcf -o $exp_name.filtered.indel.vcf $indel_filts",
              "$GATK_pre CombineVariants -R $ref --variant $exp_name.filtered.snv.vcf --variant $exp_name.filtered.indel.vcf -o $exp_name.all.vcf",
    #End UnifiedGenotyper section
-             "grep -P '\\sTruth' $exp_name.all.vcf > $exp_name.hard.vcf",
-             "grep -P '^#'       $exp_name.all.vcf > $exp_name.pass.vcf",
-             "grep PASS          $exp_name.all.vcf >> $exp_name.pass.vcf",
+             "grep -P '^#' $exp_name.all.vcf > $exp_name.pass.vcf",
+             "grep -P '^#' $exp_name.all.vcf > $exp_name.hard.vcf",
+             "grep PASS    $exp_name.all.vcf >> $exp_name.pass.vcf",
+             "grep -P '\\sVQSRT[A-Za-z0-9\.]+0\\s' $exp_name.all.vcf >> $exp_name.hard.vcf",
              "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$exp_name.pass.html -v -i vcf -o txt hg19 $exp_name.pass.vcf > $exp_name.pass.txt",
              "$JAVA_pre $snpEff/snpEff.jar eff -c $snpEff/snpEff.config -s ./$exp_name.hard.html -v -i vcf -o txt hg19 $exp_name.hard.vcf > $exp_name.hard.txt",
            );

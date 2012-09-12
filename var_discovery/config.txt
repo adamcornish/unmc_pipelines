@@ -4,5 +4,6 @@ REF_DIR   /safer/genomes/Homo_sapiens/UCSC/hg19
 BT2       /safer/genomes/Homo_sapiens/UCSC/hg19/Sequence/BowtieIndex/ucsc.hg19
 THREADS   100
 READS_DIR .
-STEP      0
+CALL_STEP 0
+ALN_STEP  0
 NAME      exp_name
