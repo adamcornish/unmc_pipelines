@@ -8,13 +8,14 @@ Usage: perl gorrammit.pl <configuration_file.txt>
 
     Configuration options available
 
-      OPTION    Default                                  Description
-      BIN       /opt/var_calling                         Absolute location of the Picard Tools and GATK jar files
-      SNPEFF    /opt/snpeff                              Absolute location of snpEff and its requisite files
-      REF_DIR   /safer/genomes/Homo_sapiens/UCSC/hg19/   Absolute location of the reference directory
-      BT2       REF_DIR/Sequence/BowtieIndex/ucsc.hg19   Absolute location of the Bowtie2 index
-      THREADS   24                                       Number of threads to use in parallelizable modules
-      READS_DIR N/A                                      Absolute location of the reads that are going to be used
-      ALN_STEP  0                                        The step to start at in aligning portion of the pipeline (0-indexed; max is 5)
-      CALL_STEP 0                                        The step to start at in variant calling portion of the pipeline (0-indexed; max is 12)
-      NAME      experiment                               The name you want to give to this experiment.
+      OPTION    Default                                             Description
+      BIN       /opt/var_calling                                    Absolute location of the Picard Tools and GATK jar files
+      SNPEFF    /opt/snpeff                                         Absolute location of snpEff and its requisite files
+      REF_DIR   /safer/genomes/Homo_sapiens/UCSC/hg19/              Absolute location of the reference directory
+      BT2       REF_DIR/Sequence/BowtieIndex/ucsc.hg19              Absolute location of the Bowtie2 index
+      REF       REF_DIR/Sequence/WholeGenomeFasta/ucsc.hg19.fasta   Absolute location of the Bowtie2 index
+      THREADS   24                                                  Number of threads to use in parallelizable modules
+      READS_DIR N/A                                                 Absolute location of the reads that are going to be used
+      ALN_STEP  0                                                   The step to start at in aligning portion of the pipeline (0-indexed; max is 5)
+      CALL_STEP 0                                                   The step to start at in variant calling portion of the pipeline (0-indexed; max is 12)
+      NAME      experiment                                          The name you want to give to this experiment

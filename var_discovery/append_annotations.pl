@@ -10,7 +10,7 @@ foreach my $file ( @files )
 {
     print "Working on $file\n";
     my @db   = "";
-    my @data = `cat $file | grep -v '^#'`;
+    my @data = `grep -v '^#' $file`;
     my $curr = "";
     my ($name ) = $file =~ /(.+?)\./;
     open OUT, ">$name.snvs.txt";

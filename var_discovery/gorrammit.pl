@@ -13,6 +13,7 @@ my $bin       = ( $config =~ /BIN\s+(\S+)/ )       ? $1 : "/opt/var_calling";
 my $snpEff    = ( $config =~ /SNPEFF\s+(\S+)/ )    ? $1 : "/opt/snpeff";
 my $ref_dir   = ( $config =~ /REF_DIR\s+(\S+)/ )   ? $1 : "/safer/genomes/Homo_sapiens/UCSC/hg19";
 my $bt2_idx   = ( $config =~ /BT2\s+(\S+)/ )       ? $1 : "$ref_dir/Sequence/BowtieIndex/ucsc.hg19";
+my $ref       = ( $config =~ /REF\s+(\S+)/ )       ? $1 : "$ref_dir/Sequence/WholeGenomeFasta/ucsc.hg19.fasta";
 my $threads   = ( $config =~ /THREADS\s+(\S+)/ )   ? $1 : "24";
 my $reads_dir = ( $config =~ /READS_DIR\s+(\S+)/ ) ? $1 : ".";
 my $aln_step  = ( $config =~ /ALN_STEP\s+(\S+)/ )  ? $1 : "0";
@@ -23,7 +24,6 @@ my $dbsnp     = "$ref_dir/Annotation/Variation/dbsnp.vcf";
 my $omni      = "$ref_dir/Annotation/Variation/omni.vcf";
 my $hapmap    = "$ref_dir/Annotation/Variation/hapmap.vcf";
 my $mills     = "$ref_dir/Annotation/Variation/indels.vcf";
-my $ref       = "$ref_dir/Sequence/WholeGenomeFasta/ucsc.hg19.fasta";
 die "There are no read 1 fastq reads in $reads_dir. The read 1 reads must be formatted as follows: *_R1.fastq.\n" unless ( `ls $reads_dir/*_R1*.fastq` );
 die "There are no read 2 fastq reads in $reads_dir. The read 2 reads must be formatted as follows: *_R2.fastq.\n" unless ( `ls $reads_dir/*_R2*.fastq` );
 chomp ( my @reads  = `ls $reads_dir/*fastq` );
@@ -68,7 +68,6 @@ while ( $skip )
     else { $skip = 0 };
 }
 
-chomp ( my @names = `ls $reads_dir/*fastq* | sed 's/_R.*fastq//' | uniq` );
 my $JAVA_pre    = "java -jar";
 my $GATK_pre    = "$JAVA_pre $gatk -T";
 my $hap_filters = "-filter 'QD < 2.0' -filterName 'QD' ".
@@ -91,8 +90,18 @@ my $indel_filts = "-filter 'QD < 2.0' -filterName 'QD' ".
                   "-filter 'ReadPosRankSum < -20.0' -filterName 'ReadPosRankSum' ".
                   "-filter 'FS > 200.0' -filterName 'FS' ".
                   "-filter 'InbreedingCoeff < -0.8' -filterName 'InbreedingCoeff'";
-my $all_bams = "";
-foreach my $name ( @names ) { $all_bams .= "-I tmp/$name.BQSR.bam "; }
+
+# TODO Yarrrr, hardcoding is baaaad.
+chomp ( my $a = `ls /safer/genomes/Homo_sapiens/UCSC/hg19/alignments/cancer_exomes/*bam` );
+$a =~ s/\s/ -I /g;
+#my $all_bams = "-I $a ";
+my $all_bams = " ";
+
+for ( my $i = 0; $i < @reads; $i += 2 )
+{
+    my ($name) = $reads[$i] =~ /^.+\/(.+?)_/;
+    $all_bams .= "-I tmp/$name.BQSR.bam ";
+}
 
 my @gatk = (
    #Begin HaplotypeCaller section
@@ -104,12 +113,12 @@ my @gatk = (
    #End HaplotypeCaller section
 
    #Begin UnifiedGenotyper section
-            #"$GATK_pre PrintReads -R $ref $all_bams -o $exp_name.all.bam",
-             "$GATK_pre ReduceReads -R $ref $all_bams -o $exp_name.reduced.bam",
-             "$GATK_pre UnifiedGenotyper -nt $threads -R $ref -I $exp_name.reduced.bam -o $exp_name.raw.snv.vcf   -glm SNP   -D $dbsnp",
-             "$GATK_pre UnifiedGenotyper -nt $threads -R $ref -I $exp_name.reduced.bam -o $exp_name.raw.indel.vcf -glm INDEL -D $dbsnp",
-             "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $exp_name.raw.snv.vcf -mG 6 -mode SNP -resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0 $hapmap -resource:omni,VCF,known=false,training=true,truth=false,prior=12.0 $omni -resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0 $dbsnp -an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an MQ -an FS -an DP -recalFile tmp/$exp_name.snv.recal -tranchesFile tmp/$exp_name.snv.model",
-             "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $exp_name.raw.indel.vcf -mG 6 -mode INDEL -resource:mills,VCF,known=true,training=true,truth=true,prior=12.0 $mills -an QD -an ReadPosRankSum -an FS -recalFile tmp/$exp_name.indel.recal -tranchesFile tmp/$exp_name.indel.model",
+             "$GATK_pre PrintReads -R $ref $all_bams -o $exp_name.all.bam",
+            #"$GATK_pre ReduceReads -R $ref $all_bams -o $exp_name.reduced.bam",
+             "$GATK_pre UnifiedGenotyper -nt $threads -R $ref -I $exp_name.all.bam -o $exp_name.raw.snv.vcf   -glm SNP   -D $dbsnp",
+             "$GATK_pre UnifiedGenotyper -nt $threads -R $ref -I $exp_name.all.bam -o $exp_name.raw.indel.vcf -glm INDEL -D $dbsnp",
+             "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $exp_name.raw.snv.vcf -mG 4 -mode SNP -resource:hapmap,VCF,known=false,training=true,truth=true,prior=15.0 $hapmap -resource:omni,VCF,known=false,training=true,truth=false,prior=12.0 $omni -resource:dbsnp,VCF,known=true,training=false,truth=false,prior=8.0 $dbsnp -an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an MQ -an FS -an DP -recalFile tmp/$exp_name.snv.recal -tranchesFile tmp/$exp_name.snv.model",
+             "$GATK_pre VariantRecalibrator -R $ref -nt $threads -input $exp_name.raw.indel.vcf -mG 4 -mode INDEL -resource:mills,VCF,known=true,training=true,truth=true,prior=12.0 $mills -an QD -an ReadPosRankSum -an FS -recalFile tmp/$exp_name.indel.recal -tranchesFile tmp/$exp_name.indel.model",
              "$GATK_pre ApplyRecalibration -R $ref -input $exp_name.raw.snv.vcf   -ts_filter_level 99.0 -tranchesFile tmp/$exp_name.snv.model   -recalFile tmp/$exp_name.snv.recal   -o $exp_name.recalibrated.snv.vcf",
              "$GATK_pre ApplyRecalibration -R $ref -input $exp_name.raw.indel.vcf -ts_filter_level 95.0 -tranchesFile tmp/$exp_name.indel.model -recalFile tmp/$exp_name.indel.recal -o $exp_name.recalibrated.indel.vcf",
              "$GATK_pre VariantFiltration -R $ref -V $exp_name.recalibrated.snv.vcf   -o $exp_name.filtered.snv.vcf   $snp_filters",
@@ -147,16 +156,17 @@ sub usage
 
     Configuration options available
 
-      OPTION    Default                                  Description
-      BIN       /opt/var_calling                         Absolute location of the Picard Tools and GATK jar files
-      SNPEFF    /opt/snpeff                              Absolute location of snpEff and its requisite files
-      REF_DIR   /safer/genomes/Homo_sapiens/UCSC/hg19/   Absolute location of the reference directory
-      BT2       REF_DIR/Sequence/BowtieIndex/ucsc.hg19   Absolute location of the Bowtie2 index
-      THREADS   24                                       Number of threads to use in parallelizable modules
-      READS_DIR N/A                                      Absolute location of the reads that are going to be used
-      ALN_STEP  0                                        The step to start at in aligning portion of the pipeline (0-indexed; max is 5)
-      CALL_STEP 0                                        The step to start at in variant calling portion of the pipeline (0-indexed; max is 12)
-      NAME      experiment                               The name you want to give to this experiment
+      OPTION    Default                                             Description
+      BIN       /opt/var_calling                                    Absolute location of the Picard Tools and GATK jar files
+      SNPEFF    /opt/snpeff                                         Absolute location of snpEff and its requisite files
+      REF_DIR   /safer/genomes/Homo_sapiens/UCSC/hg19/              Absolute location of the reference directory
+      BT2       REF_DIR/Sequence/BowtieIndex/ucsc.hg19              Absolute location of the Bowtie2 index
+      REF       REF_DIR/Sequence/WholeGenomeFasta/ucsc.hg19.fasta   Absolute location of the Bowtie2 index
+      THREADS   24                                                  Number of threads to use in parallelizable modules
+      READS_DIR N/A                                                 Absolute location of the reads that are going to be used
+      ALN_STEP  0                                                   The step to start at in aligning portion of the pipeline (0-indexed; max is 5)
+      CALL_STEP 0                                                   The step to start at in variant calling portion of the pipeline (0-indexed; max is 12)
+      NAME      experiment                                          The name you want to give to this experiment
 
 USAGE
 }
