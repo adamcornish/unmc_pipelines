@@ -1,0 +1,11 @@
+    Usage: perl eilig.pl -s SampleSheet.csv -d /data/pipeline_in/runs/120613_SN1023_0139_AD10ETACXX
+
+    Options:
+
+        -h    Prints this usage statement
+        -s    Performs the conversion of bcl to fastq with the given sample
+              sheet.
+        -d    Specify the directory to run the conversion on.  If none is 
+              provided, the most recent run is used.
+        -w    Only create the wikitable file. This requires the conversion 
+              to have already happened.
